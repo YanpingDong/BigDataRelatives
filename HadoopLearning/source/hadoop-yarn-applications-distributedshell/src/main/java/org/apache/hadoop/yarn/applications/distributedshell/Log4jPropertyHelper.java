@@ -38,6 +38,7 @@ public class Log4jPropertyHelper {
     try {
       fs = new FileInputStream(log4jPath);
       is = targetClass.getResourceAsStream("/log4j.properties");
+
       customProperties.load(fs);
       Properties originalProperties = new Properties();
       originalProperties.load(is);

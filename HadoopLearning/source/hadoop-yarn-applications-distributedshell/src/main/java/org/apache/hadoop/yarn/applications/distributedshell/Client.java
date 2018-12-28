@@ -95,7 +95,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
  * aka ApplicationsManager or ASM via the {@link ApplicationClientProtocol}. The {@link ApplicationClientProtocol} 
  * provides a way for the client to get access to cluster information and to request for a
  * new {@link ApplicationId}. <p>
- * 
+ *
  * <p> For the actual job submission, the client first has to create an {@link ApplicationSubmissionContext}. 
  * The {@link ApplicationSubmissionContext} defines the application details such as {@link ApplicationId} 
  * and application name, the priority assigned to the application and the queue
@@ -104,7 +104,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
  * the {@link ApplicationMaster} is launched. </p>
  * 
  * <p> The {@link ContainerLaunchContext} in this scenario defines the resources to be allocated for the 
- * {@link ApplicationMaster}'s container, the local resources (jars, configuration files) to be made available 
+ * {@link ApplicationMaster}'s container, the local resources (jars, configuration files) to be made available
  * and the environment to be set for the {@link ApplicationMaster} and the commands to be executed to run the 
  * {@link ApplicationMaster}. <p>
  * 
@@ -208,6 +208,8 @@ public class Client {
    * @param args Command line arguments 
    */
   public static void main(String[] args) {
+
+    LOG.info("start");
     boolean result = false;
     try {
       Client client = new Client();
@@ -505,7 +507,8 @@ public class Client {
     yarnClient.start();
 
     YarnClusterMetrics clusterMetrics = yarnClient.getYarnClusterMetrics();
-    LOG.info("Got Cluster metric info from ASM" 
+    System.out.println("test  test");
+    LOG.info("Got Cluster metric info from ASM"
         + ", numNodeManagers=" + clusterMetrics.getNumNodeManagers());
 
     List<NodeReport> clusterNodeReports = yarnClient.getNodeReports(

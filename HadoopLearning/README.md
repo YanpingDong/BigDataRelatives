@@ -295,3 +295,15 @@ Nodemanager定时地向RM汇报本节点上的资源使用情况和各个Contain
 步骤3：ApplicationMaster与ResourceManager通信，为内部要执行的任务申请资源，一旦得到资源后，将于NodeManager通信，以启动对应的任务。
 
 步骤4：所有任务运行完成后，ApplicationMaster向ResourceManager注销，整个应用程序运行结束。
+
+# Ambari
+
+　　Ambari 的作用来说，就是创建、管理、监视 Hadoop 的集群，但是这里的 Hadoop 是广义，指的是 Hadoop 整个生态圈（例如 Hive，Hbase，Sqoop，Zookeeper 等），而并不仅是特指 Hadoop。用一句话来说，Ambari 就是为了让 Hadoop 以及相关的大数据软件更容易使用的一个工具。
+
+　　Ambari主要取得了以下成绩：
+
+  - 通过一步一步的安装向导简化了集群供应。
+  - 预先配置好关键的运维指标（metrics），可以直接查看Hadoop Core（HDFS和MapReduce）及相关项目（如HBase、Hive和HCatalog）是否健康。
+  - 支持作业与任务执行的可视化与分析，能够更好地查看依赖和性能。
+  - 通过一个完整的RESTful API把监控信息暴露出来，集成了现有的运维工具。
+  - 用户界面非常直观，用户可以轻松有效地查看信息并控制集群。
