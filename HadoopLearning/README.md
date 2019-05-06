@@ -1,5 +1,4 @@
 # Hadoop简介
-https://blog.csdn.net/c929833623lvcha/article/details/81220612  一些图需要从中拿到整合到文档中
 
 ## Hadoop演进
 
@@ -67,7 +66,7 @@ https://blog.csdn.net/c929833623lvcha/article/details/81220612  一些图需要�
 
 ### 计算引擎层
 
-　　Hadoop生态和其他生态最大的不同之一就是“单一平台多种应用”的理念了。传的数据库底层只有一个引擎，只处理关系型应用，所以是“单一平台单一应用”；而NoSQL市场有上百个NoSQL软件(比如cassandra,mongoDB等)，每一个都针对不同的应用场景且完全独立，因此是“多平台多应用”的模式。而Hadoop在底层共用一份HDFS存储（现在存储层也可以用HBase和Kudu,但HBase的实际存储是存在HDFS中的。管理层是统一的，所以对计算引擎层是透明的），上层有很多个组件分别服务多种应用场景，如：
+　　Hadoop生态和其他生态最大的不同之一就是“单一平台多种应用”的理念了。传统的数据库底层只有一个引擎，只处理关系型应用，所以是“单一平台单一应用”；而NoSQL市场有上百个NoSQL软件(比如cassandra,mongoDB等)，每一个都针对不同的应用场景且完全独立，因此是“多平台多应用”的模式。而Hadoop在底层共用一份HDFS存储（现在存储层也可以用HBase和Kudu,但HBase的实际存储是存在HDFS中的。管理层是统一的，所以对计算引擎层是透明的），上层有很多个组件分别服务多种应用场景，如：
 
 - 确定性数据分析：主要是简单的数据统计任务，例如OLAP，关注快速响应，实现组件有Impala等；（OLAP，也叫联机分析处理（Online Analytical Processing）OLTP，也叫联机事务处理（Online Transaction Processing））
 - 探索性数据分析：主要是信息关联性发现任务，例如搜索，关注非结构化全量信息收集，实现组件有Search等；
@@ -85,9 +84,18 @@ https://blog.csdn.net/c929833623lvcha/article/details/81220612  一些图需要�
 
 　　服务层是包装底层引擎的编程API细节，对业务人员提供更高抽象的访问模型，如Pig、Hive等。
 
-　　而其中最炙手可热的就是OLAP的SQL市场了。现在，Spark有70%的访问量来自于SparkSQL！SQL on Hadoop到底哪家强？Hive、Facebook的Pheonix、Presto、SparkSQL、Cloudera推的Impala、MapR推的Drill、IBM的BigSQL、还是Pivital开源的HAWQ？
+　　而其中最炙手可热的就是OLAP的SQL市场了。现在，Spark有70%的访问量来自于SparkSQL。SQL on Hadoop到底哪家强？Hive、Facebook的Pheonix、Presto、SparkSQL、Cloudera推的Impala、MapR推的Drill、IBM的BigSQL、还是Pivital开源的HAWQ？
 
 　　这也许是碎片化最严重的地方了，从技术上讲几乎每个组件都有特定的应用场景，从生态上讲各个厂家都有自己的宠爱，因此Hadoop上SQL引擎已经不仅仅是技术上的博弈（也因此考虑到本篇中立性，此处不做评论）。可以遇见的是，未来所有的SQL工具都将被整合，有些产品已经在竞争钟逐渐落伍，我们期待市场的选择。
+
+
+```
+NOTE:联机分析处理OLAP是一种软件技术，它使分析人员能够迅速、一致、交互地从各个方面观察信息，以达到深入理解数据的目的。它具有FASMI(Fast Analysis of Shared Multidimensional Information)，即共享多维信息的快速分析的特征。
+
+自20世纪80年代开始，许多企业利用关系型数据库来存储和管理业务数据，并建立相应的应用系统来支持日常的业务运作。这种应用以支持业务处理为主要目的，被称为联机事务处理(On line Transaction Processing，OLTP)应用，它所存储的数据被称为操作数据或者业务数据。
+```
+
+　　
 
 　　**周边的工具更是百花齐放，最重要的莫过于可视化、任务管理和数据管理了。**
 
@@ -114,18 +122,23 @@ https://blog.csdn.net/c929833623lvcha/article/details/81220612  一些图需要�
 - 同时，微软亚洲研究院将分布式机器学习工具DMTK通过Github开源。DMTK由一个服务于分布式机器学习的框架和一组分布式机器学习算法组成，可将机器学习算法应用到大数据中。
 - 2015年12月，Facebook开源针对神经网络研究的服务器“Big Sur”，配有高性能图形处理单元（GPUs），转为深度学习方向设计的芯片。
 
-　　“发行版”这个词是开源文化特有的符号，看起来任何一个公司只要将开源代码打个包，再多多少少加个佐料就能有一个“发行版”，然而背后是:*对海量生态系统组件的价值筛选、兼容和集成保证以及支撑服务*。
-　　2012年以前的发行版基本为对Hadoop打补丁为主，出现了好几个私有化Hadoop版本，所折射的是Hadoop产品在质量上的缺陷。同期HDFS、HBase等社区的超高活跃度印证了这个事实。
-　　而之后的公司更多是工具、集成、管理，所提供的不是“更好的Hadoop”而是如何更好的用好“现有”的Hadoop。
+
+“发行版”这个词是开源文化特有的符号，看起来任何一个公司只要将开源代码打个包，再多多少少加个佐料就能有一个“发行版”，然而背后是:*对海量生态系统组件的价值筛选、兼容和集成保证以及支撑服务*。
+
+　
+2012年以前的发行版基本为对Hadoop打补丁为主，出现了好几个私有化Hadoop版本，所折射的是Hadoop产品在质量上的缺陷。同期HDFS、HBase等社区的超高活跃度印证了这个事实。　　
+
+
+而之后的公司更多是工具、集成、管理，所提供的不是“更好的Hadoop”而是如何更好的用好“现有”的Hadoop。
 　　2014年以后，随着Spark和其他OLAP产品的兴起，折射出来是Hadoop善长的离线场景等已经能够很好的解决，希望通过扩大生态来适应新的硬件和拓展新的市场。
 
 　　这几年Hadoop在数个此类应用场景中已经被证明是非常适合的解决方案，包括：
 
-  - 历史日志数据在线查询：传统的解决方案将数据存放在昂贵的关系型数据库中，不仅成本高、效率低，而且无法满足在线服务时高并发的访问量。以HBase为底层存储和查询引擎的架构非常适合有固定场景（非ad hoc）的查询需求，如航班查询、个人交易记录查询等等。现在已经成为在线查询应用的标准方案，中国移动在企业技术指导意见中明确指明使用HBase技术来实现所有分公司的清账单查询业务。
+  - 历史日志数据在线查询：传统的解决方案将数据存放在昂贵的关系型数据库中，不仅成本高、效率低，而且无法满足在线服务时高并发的访问量。以HBase为底层存储和查询引擎的架构非常适合有固定场景（非ad hoc）的查询需求，如航班查询、个人交易记录查询等等。现在已经成为在线查询应用的标准方案，中国移动在企业技术指导意见中明确指明使用HBase技术来实现所有分公司的清账单查询业务。(*即席查询（Ad Hoc）是用户根据自己的需求，灵活的选择查询条件，系统能够根据用户的选择生成相应的统计报表。即席查询与普通应用查询最大的不同是普通的应用查询是定制开发的，而即席查询是由用户自定义查询条件的。*)
 
-  - ETL任务：不少厂商已经提供了非常优秀的ETL产品和解决方案，并在市场中得到了广泛的应用。然而在大数据的场景中，传统ETL遇到了性能和QoS保证上的严重挑战。多数ETL任务是轻计算重IO类型的，而传统的IT硬件方案，如承载数据库的小型计算机，都是为计算类任务设计的，即使使用了最新的网络技术，IO也顶多到达几十GB。采用分布式架构的Hadoop提供了完美的解决方案，不仅使用share-nothing的scale-out架构提供了能线性扩展的无限IO，保证了ETL任务的效率，同时框架已经提供负载均衡、自动FailOver等特性保证了任务执行的可靠性和可用性。
+  - ETL任务：不少厂商已经提供了非常优秀的ETL产品和解决方案，并在市场中得到了广泛的应用。然而在大数据的场景中，传统ETL遇到了性能和QoS保证上的严重挑战。多数ETL任务是轻计算重IO类型的，而传统的IT硬件方案，如承载数据库的小型计算机，都是为计算类任务设计的，即使使用了最新的网络技术，IO也顶多到达几十GB。采用分布式架构的Hadoop提供了完美的解决方案，不仅使用share-nothing的scale-out架构提供了能线性扩展的无限IO，保证了ETL任务的效率，同时框架已经提供负载均衡、自动FailOver等特性保证了任务执行的可靠性和可用性。(*ETL:Extract-Transform-Load的缩写，用来描述将数据从来源端经过萃取（extract）、转置（transform）、加载（load）至目的端的过程。ETL一词较常用在数据仓库，但其对象并不限于数据仓库。*)
 
-  - 数据仓库offload：传统数据仓库中有很多离线的批量数据处理业务，如日报表、月报表等，占用了大量的硬件资源。而这些任务通常又是Hadoop所善长的
+  - 数据仓库offload：传统数据仓库中有很多离线的批量数据处理业务，如日报表、月报表等，占用了大量的硬件资源。而这些任务通常又是Hadoop所善长的。(*数据仓库与OLAP的关系是互补的，现代OLAP系统一般以数据仓库作为基础，即从数据仓库中抽取详细数据的一个子集并经过必要的聚集存储到OLAP存储器中供前端分析工具读取。OLAP系统按照其存储器的数据存储格式可以分为关系OLAP（RelationalOLAP，简称ROLAP）、多维OLAP（MultidimensionalOLAP，简称MOLAP）和混合型OLAP（HybridOLAP，简称HOLAP）三种类型。*)
 
 　　经常被问到的一个问题就是，Hadoop是否可以代替数据仓库，或者说企业是否可以使用免费的Hadoop来避免采购昂贵的数据仓库产品。数据库界的泰斗Mike Stonebroker在一次技术交流中说：数据仓库和Hadoop所针对的场景重合型非常高，未来这两个市场一定会合并。
 
@@ -150,20 +163,50 @@ https://blog.csdn.net/c929833623lvcha/article/details/81220612  一些图需要�
 　　简化实时应用。现在用户不仅关心如何实时的收集数据，而且关心同时尽快的实现数据可见和分析结果上线。无论是以前的delta架构还是现在lambda架构等，都希望能够有一种解决快速数据的方案。Cloudera最新公开的Kudu虽然还没有进入产品发布，但却是现在解决这个问题可能的最佳方案：采用了使用单一平台简化了快速数据的“存取用”实现，是未来日志类数据分析的新的解决方案。
 
 
+
+### 数据库与数据仓库的区别
+
+数据仓库：是数据库概念的升级。从逻辑上理解，数据库和数据仓库没有区别，都是通过数据库软件实现存放数据的地方。
+
+数据库与数据仓库的区别实际讲的是OLTP与OLAP的区别。 
+
+- 操作型处理，叫联机事务处理OLTP（On-Line Transaction Processing），也可以称面向交易的处理系统，它是针对具体业务在数据库联机的日常操作，通常对少数记录进行查询、修改。用户较为关心操作的响应时间、数据的安全性、完整性和并发的支持用户数等问题。传统的数据库系统作为数据管理的主要手段，主要用于操作型处理。
+
+- 分析型处理，叫联机分析处理OLAP（On-Line Analytical Processing）一般针对某些主题历史数据进行分析，支持管理决策。
+
+
+| 操作型处理| 分析型处理 | 
+| -------- | :---: | 
+|细节的|	综合或者提炼的|
+|实体-关系（E-R）模型|	星型模型或雪花模型 |
+|存储瞬间数据|	存储历史数据，不包含最近的数据|
+|可更新的	|只读、只追加|
+|一次操作一个单元	|一次操作一个集合|
+|性能要求高，响应时间短|	性能要求宽松|
+|面向事务|	面向分析|
+|一次操作数据量小	|支持决策需求|
+|数据量小|	数据量大|
+|客户订单、库存水平和银行账户查询	|客户收益分析、市场细分|
+
+说到两者就要提一下ETL，其概念如下。
+ETL：是将业务系统的数据经过抽取、清洗转换之后加载到数据仓库的过程,目的是将企业中的分散、零乱、标准不统一的数据整合到一起,为企业的决策提供分析
+
+数据流动： 多个业务数据库--->ETL --->数据仓库
+
+
 # 一、YARN介绍
 
 　　YARN简明解释
 
 ![](pic/yarn_brief_explanation.jpg)
 
-　　YARN总体上仍然是Master/Slave结构，在整个资源管理框架中，ResourceManager为Master，NodeManager为Slave,ResourceManager负责对各个NodeManager上的资源进行统一管理和调度。当用户提交一个应用程序时，需要提供一个用以跟踪和管理这个程序的ApplicationMaster，它负责向ResourceManager申请资源，并要求NodeManager启动可以占用一定资源的任务。
+　　YARN总体上仍然是master/slave结构，在整个资源管理框架中，resourcemanager为master，nodemanager是slave。Resourcemanager负责对各个nademanger上资源进行统一管理和调度。当用户提交一个应用程序时，需要提供一个用以跟踪和管理这个程序的ApplicationMaster，它负责向ResourceManager申请资源，并要求NodeManger启动可以占用一定资源的任务。由于不同的ApplicationMaster被分布到不同的节点上，因此它们之间不会相互影响。
 
 　　 Hadoop2.0 YARN包含以下实体，可以看图：
 
 ![](pic/yarn_overall.png)
 
-　　YARN总体上仍然是master/slave结构，在整个资源管理框架中，resourcemanager为master，nodemanager是slave。Resourcemanager负责对各个nademanger上资源进行统一管理和调度。当用户提交一个应用程序时，需要提供一个用以跟踪和管理这个程序的ApplicationMaster，它负责向ResourceManager申请资源，并要求NodeManger启动可以占用一定资源的任务。由于不同的ApplicationMaster被分布到不同的节点上，因此它们之间不会相互影响。
-
+　　
 　　YARN的基本组成结构，YARN主要由ResourceManager、NodeManager、ApplicationMaster和Container等几个组件构成。
 
 　　ResourceManager是Master上一个独立运行的进程，负责集群统一的资源管理、调度、分配等等；NodeManager是Slave上一个独立运行的进程，负责上报节点的状态；App Master和Container是运行在Slave上的组件，Container是yarn中分配资源的一个单位，包涵内存、CPU等等资源，yarn以Container为单位分配资源。
@@ -222,13 +265,13 @@ https://blog.csdn.net/c929833623lvcha/article/details/81220612  一些图需要�
 
 1. 单个节点上的资源管理和任务。
 2. 处理来自于resourcemanager的命令。
-3. 处理来自域app master的命令。
+3. 处理来自app master的命令。
 
 　　Nodemanager管理着抽象容器，这些抽象容器代表着一些特定程序使用针对每个节点的资源。
 Nodemanager定时地向RM汇报本节点上的资源使用情况和各个Container的运行状态（cpu和内存等资源）
 
 ```
-　　Container的运行是由ApplicationMaster向资源所在的NodeManager发起的或者ApplicationsManager（ASM）向次源所在的NodeManager发起的，Container运行时需提供内部执行的任务命令（可以使任何命令，比如java、Python、C++进程启动命令均可）以及该命令执行所需的环境变量和外部资源（比如词典文件、可执行文件、jar包等）。
+　　Container的运行是由ApplicationMaster（AM）向资源所在的NodeManager发起的或者ApplicationsManager（ASM）向资源所在的NodeManager发起的，包含Container运行时需提供内部执行的任务命令（可以使任何命令，比如java、Python、C++进程启动命令均可）以及该命令执行所需的环境变量和外部资源（比如词典文件、可执行文件、jar包等）。
 
 　　另外，一个应用程序所需的Container分为两大类，如下：
 
@@ -262,7 +305,7 @@ Nodemanager定时地向RM汇报本节点上的资源使用情况和各个Contain
 
 **Yarn的内存管理：**
 
-　　yarn允许用户配置每个节点上可用的物理内存资源，注意，这里是“可用的”，因为一个节点上内存会被若干个服务贡享，比如一部分给了yarn，一部分给了hdfs，一部分给了hbase等，yarn配置的只是自己可用的。
+　　yarn允许用户配置每个节点上可用的物理内存资源，注意，这里是“可用的”，因为一个节点上内存会被若干个服务共享，比如一部分给了yarn，一部分给了hdfs，一部分给了hbase等，yarn配置的只是自己可用的。
 
 1.  yarn.nodemanager.resource.memory-mb：表示该节点上yarn可以使用的物理内存总量，默认是8192m，注意，如果你的节点内存资源不够8g，则需要调减这个值，yarn不会智能的探测节点物理内存总量。
 
