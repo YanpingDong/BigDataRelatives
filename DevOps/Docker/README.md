@@ -38,3 +38,51 @@ the Runtime Specification outlines how to run a "filesystem bundle" that is unpa
 
 At a high-levl an OCI implementation would download an OCI Image then unpack the image into an OCI Runtime filesystem bundle
 
+## 镜像加速
+
+鉴于国内网络问题，后续拉取 Docker 镜像十分缓慢，我们可以需要配置加速器来解决，我使用的是网易的镜像地址：http://hub-mirror.c.163.com。
+
+新版的 Docker 使用 /etc/docker/daemon.json（Linux）
+
+请在该配置文件中加入（没有该文件的话，请先建一个）：
+
+```json
+{
+  "registry-mirrors": ["http://hub-mirror.c.163.com"]
+}
+```
+
+## 镜像生成
+
+制做方式
+
+1. Dockerfile
+2. 基于容器制作
+
+**基于容器制作**
+
+实际是把对一个容器的变更部分变成镜像
+
+docker commit [options] container [repository[:tag]]
+
+```
+Options:
+  -a, --author string    Author (e.g., "John Hannibal Smith <hannibal@a-team.com>")
+  -c, --change list      Apply Dockerfile instruction to the created image
+  -m, --message string   Commit message
+  -p, --pause            Pause container during commit (default true)
+```
+
+*一般会用-p来先暂停容器，避免打包过程种还出现更改。*
+
+## 镜像的导入导出
+
+该方式是为了避免push到仓库。用导出文做共享,方便本地多机简单测试
+
+```
+docker save  #导出
+docker save  -o myimages.gz dyp/httpd:v0.2
+
+docker load  #导入
+docker load -i myimages.gz
+```
