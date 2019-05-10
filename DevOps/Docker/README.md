@@ -257,6 +257,8 @@ Dockerfile is nothing but the source code for building Docker images
 
 - ONBUILD
   - Dockerfile中定义一个触发器,在别人用该镜像做基础镜像构建的时候运行
+  - ONBUILD不能自我嵌套，且不会触发FROM和MAINTAINER指令
+  - 在ONBUILD中使用ADD或COPY指令应该小心，因为新构建过程的上下文可能会缺失文件导致构建失败
   - Syntax
     - ONBUILD \<INSTRUCTION\>
   
