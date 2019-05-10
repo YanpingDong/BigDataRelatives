@@ -8,6 +8,18 @@ Docker 可以让开发者打包他们的应用以及依赖包到一个轻量级�
 
 Docker 从 17.03 版本之后分为 CE（Community Edition: 社区版） 和 EE（Enterprise Edition: 企业版）。
 
+## OCI
+
+Open Container Initiative，2015年6月创立，围绕容器格式和运行进制定一个开放的工业化标准。由以下两部分组成
+
+- the Runtime Specification
+- the Image Specification   (OCF  open container format是其标准)
+
+the Runtime Specification outlines how to run a "filesystem bundle" that is unpacked on disk
+
+At a high-levl an OCI implementation would download an OCI Image then unpack the image into an OCI Runtime filesystem bundle
+
+
 ## 对比虚拟机与Docker
 
 Docker守护进程可以直接与主操作系统进行通信，为各个Docker容器分配资源；它还可以将容器与主操作系统隔离，并将各个容器互相隔离。虚拟机启动需要数分钟，而Docker容器可以在数毫秒内启动。由于没有臃肿的从操作系统，Docker可以节省大量的磁盘空间以及其他系统资源。
@@ -22,21 +34,10 @@ Docker守护进程可以直接与主操作系统进行通信，为各个Docker�
 
 通俗来讲就是多容器从属于同一内核（Host OS）。虚拟机是每一个有自己独立的内核（Guest OS）。
 
-namespace的功能完善内核版本如下图，所以如果想要完整的docker功能需要Linux内核达到3.8。
+namespace的6种名称空间功能完善内核版本如下图，所以如果想要完整的docker功能需要Linux内核达到3.8。
 
 ![pic/namespace.png](pic/namespace.png)
 
-
-## OCI
-
-Open Container Initiative，2015年6月创立，围绕容器格式和运行进制定一个开放的工业化标准。由以下两部分组成
-
-- the Runtime Specification
-- the Image Specification   (OCF  open container format是其标准)
-
-the Runtime Specification outlines how to run a "filesystem bundle" that is unpacked on disk
-
-At a high-levl an OCI implementation would download an OCI Image then unpack the image into an OCI Runtime filesystem bundle
 
 ## 镜像加速
 
@@ -59,7 +60,258 @@ At a high-levl an OCI implementation would download an OCI Image then unpack the
 1. Dockerfile
 2. 基于容器制作
 
-**基于容器制作**
+### Dockerfile
+
+Dockerfile is nothing but the source code for building Docker images
+
+**概念和命令**
+- Dockerfile中所有的shell命令都是基于你所创建所用的基础镜像中所拥有的命令,即FROM命令指定的基础镜像中bin中必需有你所使用的命令
+- 
+- .dockerignore文件: ignore some file that you don't want package into image
+  
+- Format
+  - '#' Comment
+  - INSTRUCTION arguments
+    - The instruction is not case-sensitive
+    - Docker runs instructions in a Dockerfile in order
+    - The first instruction must be 'FROM' in order to specify the Base Image from which you are building.(FROM \<repository\>[:\<tag\>] or FROM\<repository\>@\<digest\>)
+  
+- Environment replacement : Environment variables (declared with the ENV statement) can also be used in certain instructions as variables to eb interpreted by the Dockerfile, Environment variables are notated in the Dockerfile either with $variable_name or ${variable_name}
+
+- MAINTAINER(depreacted): MAINTAINER "dyp \<email@email.com\>".  LABEL replace this!Syntax: LABEL \<key\>=\<value\>  \<key\>=\<value\> ... 
+
+- COPY: 从Docker主机复制文件到创建的新镜像文件
+  - Syntax
+    - COPY \<src\> \<src\> ... \<dest\>  or  COPY ["\<src\>",\<src\> ,...,"\<dest\>"]
+      - \<src\> : 要复制的源文件或目录，支持使用通配符
+      - \<dest\> : 目标路径，即正在创建 的image的文件系统路径;建议为 \<dest\> 使用绝对路径，否则COPY指定则以WORKDIR为其起始路径
+      - 注意： 在路径中有空白字符时，通常使用第二种格式   
+  - 文件复制准则
+    -  \<src\> 必须是build上下文中的路径，不能是Dockerfile文件父目录中的文件
+    -  如果\<src\> 是目录，则其内部文件或子目录会被递归复制，但\<src\> 目录自身不会被复制
+    -  如果指定了多个 \<src\> ，或在\<src\> 中使用了通配符，则\<dest\>必须是一个目录，且必须以/结尾
+    -  如果\<dest\>事先不存在，它将会被自动创建，这包括其父目录路径
+
+- ADD: 类似于COPY指令， ADD支持使用TAR文件和URL路径
+  - Syntax
+    - ADD \<src\> \<src\> ... \<dest\>  or  ADD ["\<src\>",\<src\> ,...,"\<dest\>"]
+  - 操作准则
+    - 同COPY指令
+    - 如果\<src\>为URL且\<dest\>不以/结尾，则\<src\>指定的文件将被下载并直接被创建为\<dest\>;如果\<dest\>以/结尾，则文件名URL指定的文件将被直接下载并保存为\<dest\>/\<filename\>
+    - 如果\<src\>是一个本地系统上的tar文件，它将会被展开为一个目录，其行为类似于“tar -x”命令;然而，通过URL获取到的tar文件将不会自动展开
+    - 如果\<src\>有多个，或其间接或直接使用了通配符，则\<dest\>必须是一个以/结尾的目录路径;否则其被视作一个普通文件，\<src\>的内容将被直接写入到\<dest\>
+
+- WORKDIR
+  - 用于为Dockerfile中所有的RUN、CMD、 ENTRYPOINT、COPY和ADD指定设定工作目录
+  - Syntax
+    - WORKDIR \<dirpath\>
+      - 在Dockerfile文件中，WORKDIR指令可出现多次，其路径也可以为相对路径，不过，其是相对此前一个WORKDIR指令指定的路径
+      - WORKDIR可以调用由ENV指定定义的变量（ WORKDIR $STATEPATH ）
+
+- VOLUME
+  - 用于在image中创建一个挂载点目录，以挂载Docker host（宿主机）上的卷或其它容器上的卷
+  - Syntax
+    - VOLUME \<mountpoint\> or   VOLUME ["\<mountpoint\>"]
+  - 如果挂载点目录路径下此前有文件存在，docker run命令会在卷挂载完成后将此前的所有文件复制到新挂载的卷中
+
+- EXPOSE
+  - 用于为容器打开指定要监听的端口以实现与外部通信,但指定不了宿主机端口，所以是动态绑定到宿主机随意端口，但必需要在启动的时候以docker -P爆露。 所以这里指定的可以理解为默认爆露端口
+  - Syntax
+    - EXPOSE \<port\> [/\<protocol\>][\<port\>[/\<protocol\>]...]   \<protocol\>用于指定传输层协议，可为tcp或udp二者之一，默认为TCP
+    - EXPOSE指令可一次指定多个端口： EXPOSE 1121/udp 11211/tcp
+
+- ENV
+  - 用于镜像定义所需的环境变量，并可被Dockerfile文件中位于其后的其它指令（如ENV、ADD、COPY等）所调用;前面即可以在启动的时候指定运行环境变量，后面的则用来指定创建时所需要的变量，分别处理不同阶段，前面是Image运行阶段的事(docker run)，后面是创建Image阶段的事（docker build）
+  - 请用格式为$variable_name  or  ${variable_name}
+  - Syntax
+    - ENV \<key\> \<value\>]  or  ENV \<key\>=\<value\>
+    - 第一种格式中，\<key\> 之后的所有内容均会被视作其 \<value\>的组成部分，因此一次只能设置一个变量
+    - 第二种格式可用一次设置多个变量，第个变量为一个\<key\>=\<value\>的键值对，如果\<value\>中包含空格，可以以反斜线（\）进行转义，也可以对\<value\>加引号进行标识;另外，反斜线也可用于续行
+    - 定义多个变量时，建议使用第二种方式，以便在同一层中完成所有功能
+  
+- RUN
+  - 用来在docker build过程中运行的程序或命令
+  - Syntax
+    - RUN \<command\>  or  RUN ["\<executable\>", "\<param1\>", "\<param2\>"]
+  - 第一种格式中， \<command\> 通常是一个shell命令，且以“/bin/sh -c”的模式来运行它,后面的CMD，ENTRYPOINT也一样，这意味着此进程在容器中的PID不为1,不能接收到Unix信号，因此，当命名用docker stop \<container\>命令停止容器时，此进程接收不到SIGTERM信号。（能接到信息的进程是进程号为1的进程）
+  - 第二中语法格式中的参数是一个**JSON格式的数组**(所以中括号并不是可选项的意思，是必需要存在的)，\<executable\>为要运行的命令，后面的\<paramN\>为传递给命令的选项或参数;然而，此程格式指定的命令不会以“/bin/sh -c”来发起而是直接由系统内核创建或可以理解为用exec来启动的命令，因此常见的shell操作如变量替换以及通配符（？，*等）替换将不会进行;不过，如果要运行的命令依赖于些shell特性的话，可以将其替换为类似以下的式式
+    - RUN ["/bin/bash", "-c", "\<executable\>", "\<param1\>", "\<param2\>"]
+    - 注意：**JSON格式的数组**中要用双引号
+  
+- CMD
+  - 类似于RUN指命，CMD指令也可以用于运行任何命令或应用程序，不过，二者的运行时间点不同
+    - RUN指令动行于镜像文件构建过程中，而CMD指令动行镜像文件启动一个容器时
+    - CMD指令的首要目的在于为启动的容器指定默认要运行的程序，且其运行结束后，容器也将终止;不过，CMD指定的命令其可以被docker run的命令行选项所覆盖
+    - 在Dockerfile中可以存在多个CMD指令，但仅最后一个会生效
+  - Syntax
+    - CMD \<command\>  or  CMD ["\<executable\>", "\<param1\>", "\<param2\>"]  or CMD ["\<param1\>", "\<param2\>"]    
+    - 前两个语法格式的意义同RUN
+    - 第三种则用于为ENTRYPOINT指令提供默认参数
+
+    ```
+    Dockerfile：CMD /bin/httpd -f -h /data/web/html/
+    Docker image instpect imageName：tag输出如下
+    "Cmd": [
+                    "/bin/sh",
+                    "-c",
+                    "/bin/httpd -f -h /data/web/html/"
+                ]
+
+    Dockerfile：CMD ["/bin/httpd", "-f", "-h", "/data/web/html/"]
+    Docker image instpect imageName：tag输出如下
+    "Cmd": [
+                    "/bin/httpd",
+                    "-f",
+                    "-h",
+                    "/data/web/html/"
+                ]
+    ```
+
+- ENTRYPOINT
+  - 类似CMD指令的功能， 用于为容器指定默认运行程序，从而使得容器像是一个单独可执行程序
+  - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV序设置的环境变量的shell脚本，然后在shell脚本中通过```exec $@```来执行CMD传过来的实际要启动的程序命令。
+    ```
+    Dockerfile部分内容如下
+    ===================================================
+    FROM nginx
+    LABEL maintainer="xxx <xxx@xxx.com>"
+
+    NGX_DOC_ROOT=/data/web/html/
+    ADD entrypint.sh /bin/
+
+    CMD ["/user/sbin/nginx", "-g", "daemon off;"]
+
+    #实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off;其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
+
+    ENTRYPOINT ["/bin/entrypoint.sh"]
+    ===================================================
+    entrypoint.sh部分内容如下：
+    ===================================================
+    #!/bin.sh
+
+    cat > /etc/my.conf << EOF
+    server {
+      server_name ${HOSTNAME};
+      listen ${IP:-0.0.0.0}:{PORT:-80};
+      root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
+    } 
+    EOF
+
+    exec "$@"
+    ===================================================
+    ```
+    - 不过，docker run 命令的--entrypoint选项的参数可覆盖ENTRYPOINT指令指定的程序
+  - Syntax
+    - ENTRYPOINT  \<command\>   or  ENTRYPOINT ["\<executable\>", "\<param1\>", "\<param2\>"]
+  - docker run 命令传入的命令参数会覆盖CMD指令的内容并且附加到ENTRYPOINT命令最后做为其参数使用
+  - Dockerfile文件中也可以存在多个ENTRYPOINT指令，但仅有最后一个会生效
+
+    ```
+    Dockerfile:ENTRYPOINT ["/bin/httpd", "-f", "-h", "/data/web/html/"]
+    Docker image instpect imageName：tag输出如下（注：没有ENTRYPOINT的时候是没有以下输出的）
+    "Entrypoint": [
+                    "/bin/httpd",
+                    "-f",
+                    "-h",
+                    "/data/web/html/"
+                ]
+    ```
+
+- USER
+  - 用于指定运行image时或运行Dockerfile中任何RUN、CMD或ENTRYPOINT指令指定的程序时的用户名或UID
+  - 默认情况下，container的运行身份为root用户
+  - Syntax
+    - USER \<UID\>|\<UserName\> 
+    - 需要注意的是，\<UID\>可以为任意数字，但实践中其必须为容器中/etc/passwd中某用户的有效UID，否则，docker run命令将运行失败
+
+- HEALTHCHECK
+  - 告诉Docker如何去测试容器是否工作。比如测试一个web服务是否进入了死循环，是否还能处理新的链接，是否还在工作等
+  - Syntax
+    - HEALTHCHECK [OPTIONS] CMD 通过在容器内部运行CMD命令来做健康检测
+      - OPTIONS选项   
+        -  --interval=DURATION(default 30s)
+        -  --timeout=DURATION(default 30s)
+        -  --start-period=DURATION(default 0s) #主进程启运多后开始检测
+        -  --retries=N (default 3)
+     - CMD退出状态码
+       - 0:success
+       - 1:unhealthy
+       - 2:reserved -不要使用该退出码
+     - For example: HEALTHCHECK --interva=5m --timeout=3s CMD curl -f http://localhost/ || exit 1
+    - HEALTHCHECK NONE 关闭所有检测，包括从基镜像继承的
+
+- SHELL
+  - 定义默认使用的是哪个shell
+  - 默认Linux是["/bin/sh", "-c"], Win是["cmd", "/S", "/C"]
+  - SHELL指令必须以JSON数据格式写： SHELL ["executable", "parameters"]
+  - 可以出现多次
+
+- STOPSIGNAL
+  - 设置系统调用息号值，该值可以使容器退出
+  - 该值可以是 syscall table中的位序
+  - Syntax： STOPSIGNAL signal
+
+- ARG
+  - 定义build-time时使用的变量， builder过程中用--build-arg \<varname\> = \<value\>来使用
+  - 用${varname}来在Dockerfile中引用
+
+- ONBUILD
+  - Dockerfile中定义一个触发器,在别人用该镜像做基础镜像构建的时候运行
+  - Syntax
+    - ONBUILD \<INSTRUCTION\>
+  
+  
+**Dockerfile 首字母要大写, 且命令能压缩成一个的尽量做成一个，因为每一个更改命令都成为镜像的一层（分层联合挂载机制）**
+
+**示例**
+
+```Dockerfile
+#基于busybox最新的版本进行创建镜像
+FROM busybox:latest
+
+#在以该镜像做基础镜像做镜像的时候，会先下载一个nginx到/data/web/nginx1/
+ONBUILD ADD http://nginx.org/download/nginx-1.14.2.tar.gz /data/web/nginx1/
+
+ARG author="lear <lear521@163.com>"
+
+MAINTAINER ${author}
+# LABLE maintainer="lear <lear521@163.com>"
+
+#文件
+COPY index.html /data/web/html/
+
+#目录
+COPY youtube_topic/ /data/web/youtube_topic/
+
+#会从网上下载并放到指定目录下
+ADD http://nginx.org/download/nginx-1.14.2.tar.gz /data/web/nginx/
+RUN cd /data/web/nginx/ && \
+    tar -xf nginx-1.14.2.tar.gz 
+
+#docker内部目录
+WORKDIR /usr/local/
+#这个时候目录是/usr/local/
+ADD index.html ./  
+ 
+#将docker下/data/mysql/目录做为内部挂载点
+VOLUME /data/mysql/   
+
+EXPOSE 80/tcp
+
+ENV DOC_ROOT /data/web/htmlother/
+#如果DOC_ROOT没有值则用/data/web/html2/
+COPY index.html ${DOC_ROOT:-/data/web/html2/} 
+
+RUN echo '<h1>Busybox httpd server</h1>' > /data/web/html/index2.html
+
+#CMD ["/bin/httpd", "-f", "-h", "/data/web/html/"]
+
+HEALTHCHECK --interval=5m --start-period=10s --timeout=3s CMD wget -O - -q http://localhost/ || exit 1
+
+ENTRYPOINT ["/bin/httpd", "-f", "-h", "/data/web/html/"]
+```
+
+## 基于容器制作
 
 实际是把对一个容器的变更部分变成镜像
 
@@ -86,3 +338,8 @@ docker save  -o myimages.gz dyp/httpd:v0.2
 docker load  #导入
 docker load -i myimages.gz
 ```
+
+## Docker命令类
+docker image
+docker network
+docker container
