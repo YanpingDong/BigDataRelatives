@@ -185,6 +185,7 @@ Dockerfile is nothing but the source code for building Docker images
 
     ENTRYPOINT ["/bin/entrypoint.sh"]
     ===================================================
+    
     entrypoint.sh部分内容如下：
     ===================================================
     #!/bin.sh
@@ -342,6 +343,43 @@ docker load -i myimages.gz
 ```
 
 ## Docker命令类
-docker image
-docker network
-docker container
+
+- docker image
+- docker network
+- docker container
+
+
+## 设置Docker资源限制
+
+以下都是docker ran or create所支持的。
+
+### MEM
+
+不设置没限制
+
+| --memory-swap | --memory | 功能  |
+| ------------- | -------- | ---- |
+|正数 S|正数 M| 容器可用总空间为S，其中ram为M，Swap为（S-M）,若S=M，则无可用Swap|
+|0|正数 M|相当未设置Swap|
+|unset|正数 M|若主机（Docker Host）启用了swap,则容器的可用swapo 2*M|
+|-1|正数M|若主机（Docker Host）启用了swap,则容器可使用的最大值是主机上的所有swap空间的Swap资源|
+
+--oom-kill-disable : 默认情况下，如果发生OOM错，内核会杀掉容器中的进程。如果想改变这种行为就可以使用该参数。但只有当设置了-m/--memory后，才能设置该参数。如果-m没有设置，宿主机会的内存使用会超出限制，内核需要去杀掉宿主机系统进程来获得内存。
+
+### CPU
+
+不设置没限制，在Docker >=1.13的版本， 还可以设置实时调度优先级。
+
+```
+CFS调度算法负责在linux上维护为任务提供处理器时间方面的平衡。设置值区间为[100,139]或[0,99],后者是实时优先级取值范围
+```
+
+--cpu-shares int: 通过比例进行分配，比如A：1024  B：512 ，这AB两个容器以2：1的方式进行分配CPU
+
+--cpus decimal : 固定分配
+
+--cpuset-cpus string: 指定CPU核型，即固定容器所能运行的CPU。第一个CPU值为0.             CPUs in which to allow execution (0-3, 0,1)
+
+```
+Usage:200%代表使用2个cpu
+```
