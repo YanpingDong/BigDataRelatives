@@ -65,8 +65,9 @@ namespace的6种名称空间功能完善内核版本如下图，所以如果想�
 Dockerfile is nothing but the source code for building Docker images
 
 **概念和命令**
+
 - Dockerfile中所有的shell命令都是基于你所创建所用的基础镜像中所拥有的命令,即FROM命令指定的基础镜像中bin中必需有你所使用的命令
-- 
+  
 - .dockerignore文件: ignore some file that you don't want package into image
   
 - Format
@@ -111,7 +112,9 @@ Dockerfile is nothing but the source code for building Docker images
 - VOLUME
   - 用于在image中创建一个挂载点目录，以挂载Docker host（宿主机）上的卷或其它容器上的卷
   - Syntax
-    - VOLUME \<mountpoint\> or   VOLUME ["\<mountpoint\>"]
+    - VOLUME \<mountpoint\>   or   VOLUME ["\<mountpoint\>"]
+    - 挂载到宿主机的位置并没有指定，所以docker会自动绑定主机上的一个目录。可以通过```docker inspec NAME|ID```来查看
+    - 通过命令行可以指定宿主机目录：```docker run --name test -it -v /home/xqh/myimage:/data imageName```;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的
   - 如果挂载点目录路径下此前有文件存在，docker run命令会在卷挂载完成后将此前的所有文件复制到新挂载的卷中
 
 - EXPOSE
@@ -119,6 +122,7 @@ Dockerfile is nothing but the source code for building Docker images
   - Syntax
     - EXPOSE \<port\> [/\<protocol\>][\<port\>[/\<protocol\>]...]   \<protocol\>用于指定传输层协议，可为tcp或udp二者之一，默认为TCP
     - EXPOSE指令可一次指定多个端口： EXPOSE 1121/udp 11211/tcp
+  - 命令行可以通过-p(小写p)可以指定要映射的端口，并且在一个指定的端口上只可以绑定一个容器。支持的格式有：```IP:HostPort:ContainerPort | IP::ContainerPort | HostPort:ContainerPort ```缺省掉的值都是由宿主机随机映射
 
 - ENV
   - 用于镜像定义所需的环境变量，并可被Dockerfile文件中位于其后的其它指令（如ENV、ADD、COPY等）所调用;前面即可以在启动的时候指定运行环境变量，后面的则用来指定创建时所需要的变量，分别处理不同阶段，前面是Image运行阶段的事(docker run)，后面是创建Image阶段的事（docker build）
@@ -140,7 +144,7 @@ Dockerfile is nothing but the source code for building Docker images
   
 - CMD
   - 类似于RUN指命，CMD指令也可以用于运行任何命令或应用程序，不过，二者的运行时间点不同
-    - RUN指令动行于镜像文件构建过程中，而CMD指令动行镜像文件启动一个容器时
+    - RUN指令运行于镜像文件构建过程中，而CMD指令运行镜像文件启动一个容器时
     - CMD指令的首要目的在于为启动的容器指定默认要运行的程序，且其运行结束后，容器也将终止;不过，CMD指定的命令其可以被docker run的命令行选项所覆盖
     - 在Dockerfile中可以存在多个CMD指令，但仅最后一个会生效
   - Syntax
@@ -170,7 +174,7 @@ Dockerfile is nothing but the source code for building Docker images
 - ENTRYPOINT
   - 类似CMD指令的功能， 用于为容器指定默认运行程序，从而使得容器像是一个单独可执行程序
   - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV序设置的环境变量的shell脚本，然后在shell脚本中通过```exec $@```来执行CMD传过来的实际要启动的程序命令。
-    ```
+  - 如果非要改写可以在运行进用```--entrypoint```参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用```docker container run  --entrypoint "/bin/python"  --name sencom image --version```;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
     Dockerfile部分内容如下
     ===================================================
     FROM nginx
@@ -181,7 +185,7 @@ Dockerfile is nothing but the source code for building Docker images
 
     CMD ["/user/sbin/nginx", "-g", "daemon off;"]
 
-    #实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off;其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
+    #实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
 
     ENTRYPOINT ["/bin/entrypoint.sh"]
     ===================================================
@@ -253,7 +257,7 @@ Dockerfile is nothing but the source code for building Docker images
   - Syntax： STOPSIGNAL signal
 
 - ARG
-  - 定义build-time时使用的变量， builder过程中用--build-arg \<varname\> = \<value\>来使用
+  - 定义build-time时使用的变量， builder过程中用--build-arg \<varname\> = \<value\>来使用;而ENV是在running-time进用的
   - 用${varname}来在Dockerfile中引用
 
 - ONBUILD
@@ -361,10 +365,10 @@ docker load -i myimages.gz
 | ------------- | -------- | ---- |
 |正数 S|正数 M| 容器可用总空间为S，其中ram为M，Swap为（S-M）,若S=M，则无可用Swap|
 |0|正数 M|相当未设置Swap|
-|unset|正数 M|若主机（Docker Host）启用了swap,则容器的可用swapo 2*M|
-|-1|正数M|若主机（Docker Host）启用了swap,则容器可使用的最大值是主机上的所有swap空间的Swap资源|
+|unset|正数 M|若主机（Docker Host）启用了swap,则容器的可用swa务
+|-1|正数M|若主机（Docker Host）启用了swap,则容器可使用的最大务上的所有swap空间的Swap资源|
 
---oom-kill-disable : 默认情况下，如果发生OOM错，内核会杀掉容器中的进程。如果想改变这种行为就可以使用该参数。但只有当设置了-m/--memory后，才能设置该参数。如果-m没有设置，宿主机会的内存使用会超出限制，内核需要去杀掉宿主机系统进程来获得内存。
+--oom-kill-disable : 默认情况下，如果发生OOM错，内核会杀掉容务程。如果想改变这种行为就可以使用该参数。但只有当设置了-m/--memory后，才能设置务。如果-m没有设置，宿主机会的内存使用会超出限制，内核需要去杀掉宿主机系统进程来获务
 
 ### CPU
 
