@@ -6,6 +6,11 @@ Ansible 是一个模型驱动的配置管理器，支持多节点发布、远程
 2. 不用帮每台机器 (instance) 预安装 agent ，只要有 SSH 和 Python 就可以闯天下！
 3. 4 大主流的配置管理器(Puppet, SaltStack, Chef, Ansible) 中， Ansible 是最容易上手，且马上就可以用的工具。
 
+```
+登录远程计算机方式：
+1. 可以使用ssh通过命令登录形式进行远程机器管理。在/etc/ansible/hosts里配置ansible_ssh_pass=‘密码’ + 命令行-u运行参数来指定用户（也可以设置/etc/ansible/ansible.cfg中设置remote_user来设置默认登录远端用户名）
+2. 或者配置ssh免密登录
+```
 ## 安装
 
 ```bash
@@ -146,6 +151,86 @@ database_server: storage.example.org
 ```
 
 ‘raleigh’ 组下的所有主机,都可以使用 ‘raleigh’ 组的变量.当变量变得太多时,分文件定义变量更方便我们进行管理和组织. 还有一个方式也可参考,详见 Ansible Vault 关于组变量的部分. 注意,分文件定义变量的方式只适用于 Ansible 1.4 及以上版本.
+
+#### 动态 Inventory
+
+静态 Inventory 指的是在文件中指定的主机和组，动态 Inventory 指通过外部脚本获取主机列表，并按照 ansible 所要求的格式返回给 ansilbe 命令的。这部分一般会结合 CMDB 资管系统、云计算平台等获取主机信息。由于主机资源一般会动态的进行增减，而这些系统一般会智能更新。我们可以通过这些工具提供的 API 或者接入库查询等方式返回主机列表。
+
+只要你的脚本输出格式是满足要求的 JSON，这样就可以成为一个动态的资产生成器。
+
+**脚本规约**
+
+用于生成 JSON 的脚本对实现语言没有要求，它可以是一个可执行脚本、二进制文件，或者其他任何可以运行文件，但是必须输出为 JSON 格式.
+
+```json
+{
+    "group1": {
+        "hosts": [
+            "192.168.28.71",
+            "192.168.28.72"
+        ],
+        "vars": {
+            "ansible_ssh_user": "johndoe",
+            "ansible_ssh_private_key_file": "~/.ssh/mykey",
+            "example_variable": "value"
+        },
+        "children":['group2']
+    },
+    "_meta": {
+        "hostvars": {
+            "192.168.28.71": {
+                "host_specific_var": "bar"
+            },
+            "192.168.28.72": {
+                "host_specific_var": "foo"
+            }
+        }
+    }
+}
+```
+
+
+**脚本实现**
+
+```
+[group1]
+127.0.0.1
+ 
+[group2]
+192.168.13.128
+192.168.13.5
+ 
+[group2:vars]
+ansible_ssh_port=5555
+ansible_connection=ssh
+```
+
+dynamic_investory.py。这个脚本可以从外部来请求数据比如访问自己的配置服务器，但这里为了简化所以直接返回Json
+```python
+#!/usr/bin/python
+#coding = utf-8
+ 
+import json
+group1 = 'group1'
+group2 = 'group2'
+hosts1 = ['127.0.0.1']
+hosts2 = ['192.168.13.128', '192.168.13.5']
+vars = {'ansible_ssh_host':'127.0.0.1', 'ansible_ssh_port':32768,'ansible_ssh_pass':'docker'}
+hostdata = {group1:{"hosts": hosts1, "vars": vars}, group2:{"hosts": hosts2, "vars": vars}}
+print(json.dumps(hostdata, indent=4))
+
+```
+**使用**
+
+```bash
+# 可以指定组
+$ ansible -i hostlist.py group1 -m ping
+127.0.0.1 | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+
+```
 
 ## Ansible操作方式
 
