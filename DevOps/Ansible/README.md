@@ -36,6 +36,14 @@ sudo pip install ansible
 ## 设置
 
 1. ansible的默认配置文件路径为 /etc/ansible
+
+```bash
+$ ansible --version
+ansible 2.0.0.2
+  config file = /etc/ansible/ansible.cfg
+  configured module search path = Default w/o overrides
+
+```
 2. 通常我们较偏爱把 ansible.cfg 和 hosts 这两个档案与其它的 Playbooks 放在同个专案目录底下，然后通过版本控制系统 (例如 Git) 把它们一起储存起来，以实现 Ansible 的 Infrastructure as Code！
 
 ### Inventory文件
