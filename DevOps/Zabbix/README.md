@@ -154,7 +154,7 @@ sudo systemctl enable mariadb.service
 
 4. 安装zabbix
   
-  [zabbix](https://www.zabbix.com/download)官方网站安装zabbix命令获取
+  [zabbix](https://www.zabbix.com/download)官方网站会依据你的OS、OS VERSION、DATABASE选择给出不同的安装指令，过程如下
 
   a) 选择平台，通过选择你的OS、OS VERSION、DATABASE第二步会给出适合的安装命令
 
@@ -246,5 +246,5 @@ Password zabbix
 
 [参考博客地址](https://websiteforstudents.com/how-to-install-zabbix-4-0-monitoring-system-with-apache2-mariadb-and-php-7-2-on-ubuntu-16-04-18-04-18-10/)
 
-[zabbix](https://www.zabbix.com/download)官方网站安装zabbix命令获取
+[zabbix](https://www.zabbix.com/download)官方网站安装指南
 
