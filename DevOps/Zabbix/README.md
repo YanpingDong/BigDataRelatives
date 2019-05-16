@@ -6,6 +6,89 @@ zabbix由2部分构成，zabbix server与可选组件zabbix agent。
 
 zabbix server可以通过SNMP，zabbix agent，ping，ssh/telnet,IPMI,JMX,端口监视等方法提供对远程服务器/网络状态的监视，数据收集等功能，它可以运行在Linux，Solaris，HP-UX，AIX，Free BSD，Open BSD，OS X等平台上。
 
+Zabbix 是基于先进 Apache Web 服务器、领先的数据库引擎和 PHP 脚本语言构建的。
+- Apache 	1.3.12 或以上 	
+- PHP 	5.4.0 或以上 
+- DB 见下列表
+ 
+| 数据库 | 版本 | 备注 |
+|:----|:----|:----| 
+|Apache|1.3.12 或以上 |使用 MySQL 作为 Zabbix 后端数据库。需要InnoDB引擎。
+MariaDB 同样支持。 |
+|Oracle|10g or later |	使用 Oracle 作为 Zabbix 后端数据库。 |
+|PostgreSQL |	8.1 or later |	使用 PostgreSQL 作为 Zabbix 后端数据库。
+建议使用 PostgreSQL 8.3 以上的版本, 以 提供更好的VACUUM性能。 |
+|IBM DB2 |	9.7 or later |	使用 DB2 作为 Zabbix 后端数据库。
+|SQLite |	3.3.5 or later |	只有 Zabbix proxy 支持 SQLite ，可以使用 SQLite 作为 Zabbix proxy 数据库。 
+
+## 数据库容量
+
+Zabbix 配置文件数据需要固定数量的磁盘空间，且增长不大。
+
+Zabbix 数据库大小主要取决于这些变量，这些变量决定了存储的历史数据量:
+
+**每秒处理值的数量**
+
+这是 Zabbix server 每秒接收的新值的平均数。 例如，如果有3000个监控项用于监控，取值间隔为60秒，则这个值的数量计算为 3000/60 = 50 。
+
+这意味着每秒有 50 个新值被添加到 Zabbix 数据库中。
+
+**关于历史数据的管家设置**
+
+Zabbix 将接收到的值保存一段固定的时间，通常为几周或几个月。 每个新值都需要一定量的磁盘空间用于数据和索引。
+
+所以，如果我们每秒收到 50 个值，且希望保留 30 天的历史数据，值的总数将大约在 (30*24*3600)* 50 = 129.600.000，即大约 130M 个值。
+
+根据所使用的数据库引擎，接收值的类型（浮点数、整数、字符串、日志文件等），单个值的磁盘空间可能在 40 字节到数百字节之间变化。 通常，数值类型的每个值大约为 90 个字节。
+
+在上面的例子中，这意味着 130M 个值需要占用 130M * 90 bytes = 10.9GB 磁盘空间。 
+
+**趋势数据的管家设置**
+
+Zabbix 为表 trends 中的每个项目保留1小时的最大值 / 最小值 / 平均值 / 统计值。 该数据用于趋势图形和历史数据图形。 这一个小时的时间段是无法自定义。
+
+Zabbix数据库，根据数据库类型，每个值总共需要大约90个字节。
+
+假设我们希望将趋势数据保持5年。 3000 个监控项的值每年需要占用 3000*24*365* 90 = 2.2GB 空间，或者5年需要占用 11GB 空间。 
+
+下表包含可用于计算 Zabbix 系统所需磁盘空间的公式： 
+
+- Zabbix : 配置文件 :固定大小。通常为 10MB 或更少。
+- History : days*(items/refresh rate)*24*3600*bytes
+  - items：监控项数量。
+  - days：保留历史数据的天数。
+  - refresh rate：监控项的更新间隔。
+  - bytes：保留单个值所需要占用的字节数，依赖于数据库引擎，通常为 ~90 字节。 
+- Trends : days*(items/3600)*24*3600*bytes
+  - items：监控项数量。
+  - days：保留历史数据的天数。
+  - bytes：保留单个趋势数据所需要占用的字节数，依赖于数据库引擎，通常为 ~90 字节。 
+- Events: days*events*24*3600*bytes
+  - events：每秒产生的事件数量。假设最糟糕的情况下，每秒产生 1 个事件。
+  - days：保留历史数据的天数。
+  - bytes：保留单个趋势数据所需的字节数，取决于数据库引擎，通常为 ~170 字节
+
+因此，所需要的磁盘总空间按下列方法计算：
+
+**配置文件数据+ 历史数据+ 趋势数据+ 事件数据**
+
+**事件的管家设置**
+
+每个 Zabbix 事件需要大约 170 个字节的磁盘空间。 很难估计 Zabbix 每天生成的事件数量。 在最坏的情况下，假设 Zabbix 每秒生成一个事件。
+
+这意味着如果想要保留3年的事件，这将需要占用 3*365*24*3600* 170 = 15GB 的空间。 
+
+[原文](https://www.zabbix.com/documentation/4.0/zh/manual/installation/requirements)
+
+
+## 时间同步
+
+在运行 Zabbix 的服务器上拥有精确的系统日期非常重要。 ntpd 是最受欢迎的守护进程，它将主机的时间与其他服务器的时间同步。 对于所有运行 Zabbix 组件的系统，强烈建议这些系统的时间保持同步。
+
+如果时间未同步，Zabbix将在建立数据连接之后，根据得到的客户端和服务器的时间戳，并通过客户端和服务器的时间差对获得值的时间戳进行调整，将获得值的时间戳转化为 Zabbix server 的时间。 为了尽可能简化并且避免可能的并发问题出现，网络延迟将会被忽略。因此，通过主动连接（active agent, active proxy, sender）获得的时间戳数据将包含网络延迟，通过被动连接（passive proxy）获得的数据已经减去了网络延迟。所有其他监控类型都在服务器时间里完成，并且不会调整其时间戳。
+
+
+[原文](https://www.zabbix.com/documentation/4.0/zh/manual/installation/requirements)
 
 ## Zabbix 架构
 
@@ -13,9 +96,18 @@ Zabbix的整体框架如下图所示：
 
 ![Zabbix_Framework](pic/Zabbix_Framework.png)
 
-- zabbix agent : 部署在被监控机器上，监控被监控主机数据，并发送给servier
-- zabbix server : 用来接收监控对像数据，组织配置信息、统计信息、操作数据等
+- zabbix agent : 部署在被监控目标上，用于主动监控本地资源和应用程序，并将收集的数据发送给 Zabbix server
+  
+  ```
+  被动检查 模式中 agent 应答数据请求。Zabbix server（或 proxy）询求数据，例如 CPU load，然后 Zabbix agent 返还结果。
+
+  主动检查 处理过程将相对复杂。Agent 必须首先从 Zabbix sever 索取监控项列表以进行独立处理，然后会定期发送采集到的新值给 Zabbix server。 
+  ```
+
+- zabbix server : 是 Zabbix软件的核心组件，agent 向其报告可用性、系统完整性信息和统计信息。server也是存储所有配置信息、统计信息和操作信息的核心存储库
+
 - zabbix database : 存储监控对像数据
+
 - zabbix web : php编写的GUI（所以如果需要展示信息需要依赖LAMP）
   
 
@@ -164,6 +256,7 @@ sudo systemctl enable mariadb.service
   OS VERSION：16.04
   DATABASE：MySQL
   ```
+
   b) 安装配置Zabbix：通过第一步的设定，该部分的安装程序命令按要求适应你的选择
    
    - 安装Zabbix仓库
@@ -235,12 +328,17 @@ http://your_host_name/zabbix/
   step5: Pre-installation summary
   step6: install #56两步也不需要干预
 
+```
 8. 登录zabbix
-#When you’re done, logon with: Case Sensitive
+When you’re done, logon with: Case Sensitive
 Username: Admin
 Password zabbix
 
-```
+9. 这一会你会发现在Monitoring-->Dashboard页下会在Problems里看到Zabbix agent on Zabbix server is unreachable for 5 minutes的错，如下图所示。这是因为在安装Zabbix Server的时候给默认创建了Zabbix server监控，所以只需要在Zabbix server机器上使用```sudo sysytemctl start zabbix-agent```启动agent即可。但要看到数据要过2分钟左右。（通过本文安装过程安装的Zabbix会包含Server和Agent两部分,server的配置文件在第6步讲过，agent在/etc/zabbix/zabbix_agentd.conf）
+
+![ZabbixAgentUnreach](pic/ZabbixAgentUnreach.png)
+
+
 
 参考：
 

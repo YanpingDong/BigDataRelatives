@@ -175,6 +175,9 @@ Dockerfile is nothing but the source code for building Docker images
   - 类似CMD指令的功能， 用于为容器指定默认运行程序，从而使得容器像是一个单独可执行程序
   - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV序设置的环境变量的shell脚本，然后在shell脚本中通过```exec $@```来执行CMD传过来的实际要启动的程序命令。
   - 如果非要改写可以在运行进用```--entrypoint```参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用```docker container run  --entrypoint "/bin/python"  --name sencom image --version```;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
+  
+    
+    ```
     Dockerfile部分内容如下
     ===================================================
     FROM nginx
@@ -205,7 +208,7 @@ Dockerfile is nothing but the source code for building Docker images
     exec "$@"
     ===================================================
     ```
-    - 不过，docker run 命令的--entrypoint选项的参数可覆盖ENTRYPOINT指令指定的程序
+
   - Syntax
     - ENTRYPOINT  \<command\>   or  ENTRYPOINT ["\<executable\>", "\<param1\>", "\<param2\>"]
   - docker run 命令传入的命令参数会覆盖CMD指令的内容并且附加到ENTRYPOINT命令最后做为其参数使用
