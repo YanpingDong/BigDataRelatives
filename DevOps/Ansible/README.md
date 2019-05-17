@@ -70,6 +70,8 @@ ansible_python_interpreter     #用来指定python解释器的路径，默认为
 ansible_*_interpreter     #其他解释器路径，用法与ansible_python_interpreter类似，这里"*"可以是ruby或才perl等
 ```
 
+**免密登录设軒到.ssh目录下的config文件下也是可以的，只需要把配置到config的host放到ansible的hosts配置文件中即可**
+
 ```
 mail.example.com
 
