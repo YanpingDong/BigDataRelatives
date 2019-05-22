@@ -152,7 +152,7 @@ Dockerfile is nothing but the source code for building Docker images
     - 前两个语法格式的意义同RUN
     - 第三种则用于为ENTRYPOINT指令提供默认参数
 
-    ```
+    ```docker
     Dockerfile：CMD /bin/httpd -f -h /data/web/html/
     Docker image instpect imageName：tag输出如下
     "Cmd": [
@@ -177,7 +177,7 @@ Dockerfile is nothing but the source code for building Docker images
   - 如果非要改写可以在运行进用```--entrypoint```参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用```docker container run  --entrypoint "/bin/python"  --name sencom image --version```;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
   
     
-    ```
+    ```docker
     Dockerfile部分内容如下
     ===================================================
     FROM nginx
