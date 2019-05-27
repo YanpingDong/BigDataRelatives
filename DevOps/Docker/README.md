@@ -8,6 +8,8 @@ Docker 可以让开发者打包他们的应用以及依赖包到一个轻量级�
 
 Docker 从 17.03 版本之后分为 CE（Community Edition: 社区版） 和 EE（Enterprise Edition: 企业版）。
 
+*docker理念一个容器运行一个进程！！！*
+
 ## OCI
 
 Open Container Initiative，2015年6月创立，围绕容器格式和运行进制定一个开放的工业化标准。由以下两部分组成
@@ -53,6 +55,7 @@ namespace的6种名称空间功能完善内核版本如下图，所以如果想�
 }
 ```
 
+也可以在/etc/default/docker文件中配置```DOCKER_OPTS="--registry-mirror=http://mirror-address"``` 如果该目录下没有该文件自行创建一个即可。该文件是docker的启动配置文件
 ## 镜像生成
 
 制做方式
@@ -354,7 +357,9 @@ docker load -i myimages.gz
 - docker image
 - docker network
 - docker container
+- docker logs [-c -f ]
 
+*Ctrl p+q退出交并使运行起来的容器运行在后台。或者在启动的时候用-d参数*
 
 ## 设置Docker资源限制
 
