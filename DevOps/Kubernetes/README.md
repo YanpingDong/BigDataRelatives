@@ -7,7 +7,7 @@
 
 # 什么是Kubernetes
 
-Kubernetes（k8s）是自动化容器操作的开源平台，这些操作包括部署，调度和节点集群间扩展。如果你曾经用过Docker容器技术部署容器，那么可以将Docker看成Kubernetes内部使用的低级别组件。Kubernetes不仅仅支持Docker，还支持Rocket，这是另一种容器技术。
+Kubernetes（k8s）是自动化容器操作的开源平台，这些操作包括部署，调度和节点集群间扩展。如果你曾经用过Docker容器技术部署容器，那么可以将Docker看成Kubernetes内部使用的低级别组件。**Kubernetes不仅仅支持Docker，还支持Rocket，这是另一种容器技术**。
 
 Kubernetes特性：
 
@@ -50,4 +50,19 @@ Kubernetes特性：
 
 另一个重要概念label：Kubernetes的Label是attach到Pod的一对键/值对，用来传递用户定义的属性。来区分事物，还可以根据 label 来查询。label 是开放式的：可以根据角色，稳定性或其它重要的特性来指定。比如，你可能创建了一个"tier"和“app”标签，通过Label（tier=frontend, app=myapp）来标记前端Pod容器，使用Label（tier=backend, app=myapp）标记后台Pod。
 
+# Kubernetes框架
 
+k8s是主从结构整体如下所示
+
+![k8swholepicture.jpg](pic/k8swholepicture.jpg)
+
+Master节点
+
+![k8smaster.jpg](pic/k8smaster.jpg)
+
+Node节点
+
+![k8snode.jpg](pic/k8snode.jpg)
+
+
+[参考引用](https://blog.csdn.net/wenjianfeng/article/details/90130895)
