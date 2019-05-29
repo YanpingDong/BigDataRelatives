@@ -54,11 +54,7 @@ Kubernetes特性：
 
 一个K8S系统，通常称为一个K8S集群（Cluster）。
 
-这个集群主要包括两个部分：
-
-一个Master节点（主节点）
-
-一群Node节点（计算节点）
+这个集群主要包括两个部分：一个Master节点（主节点）和 一群Node节点（计算节点）
 
 下图是整体结构，是一个主从式集群，Master结点可冗余配置，负责管理和控制。Node节点是工作负载节点，里面是具体的容器。
 
@@ -82,14 +78,10 @@ Controller manager负责管理控制器，相当于“大总管”。
 
 Node节点包括Docker、kubelet、kube-proxy、Fluentd、kube-dns（可选），还有就是Pod。
 
-Docker: 创建容器的，但k8s支持的容器并不只限于Docker。
-
-Kubelet: 主要负责监视（即Master Scheduler）指派到它所在Node上的Pod，包括创建、修改、监控、删除等。
-
-Kube-proxy: 主要负责为Pod对象提供代理。
-
-Fluentd: 主要负责日志收集、存储与查询。
-
+- Docker: 创建容器的，但k8s支持的容器并不只限于Docker。
+- Kubelet: 主要负责监视（即Master Scheduler）指派到它所在Node上的Pod，包括创建、修改、监控、删除等。
+- Kube-proxy: 主要负责为Pod对象提供代理。
+- Fluentd: 主要负责日志收集、存储与查询。
 
 ```
 Pod是Kubernetes最基本的操作单元。一个Pod代表着集群中运行的一个进程，它内部封装了一个或多个紧密相关的容器。除了Pod之外，K8S还有一个Service的概念，一个Service可以看作一组提供相同服务的Pod的对外访问接口。
@@ -124,8 +116,76 @@ kubeadm 的整体功能目前还是 Beta 状态，然而很快在 2018 年就会
 Kubernetes 发现版本的通常只维护支持九个月，在维护周期内，如果发现有比较重大的 bug 或者安全问题的话， 可能会发布一个补丁版本。同时也适用于 kubeadm。
 ```
 
-## kubeadm集群配置
+## 安装
 
+Master节点需要：安装kubelet，kubeadm，kubectl，Dokcer
+
+Node节点需要：安装kubelet，kubeadm，kubectl，Dokcer，并加入master节点
+
+使用国内镜像站
+
+```bash
+sudo apt-get update && sudo apt-get install -y apt-transport-https curl
+
+sudo curl -s https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | sudo apt-key add -
+
+sudo tee /etc/apt/sources.list.d/kubernetes.list << EOF
+deb https://mirrors.aliyun.com/kubernetes/apt kubernetes-xenial main
+EOF
+
+sudo apt-get update
+
+#查看版本
+apt-cache madison kubeadm
+#查看过版本之后就可以指定版本安装
+$ sudo apt-get install -y kubelet=1.14.0-00 kubeadm=1.14.0-00 kubectl=1.14.0-00
+$ sudo apt-mark hold kubelet=1.14.0-00 kubeadm=1.14.0-00 kubectl=1.14.0-00
+```
+
+**环境设置**
+
+```bash
+#以下操作都是在Ubuntu 16.04下
+Step1：关闭swap
+使用命令‘swapoff -a’ 禁用swap
+
+Step2：关闭防火墙和SElinux
+systemctl stop firewalld
+输出：Failed to stop firewalld.service: Unit firewalld.service not loaded.
+执行：systemctl disable firewalld
+输出：Failed to execute operation: No such file or directory
+执行：setenforce 0
+输出：The program 'setenforce' is currently not installed. You can install it by typing:apt install selinux-utils
+执行：apt install selinux-utils
+写入
+$ vim /etc/selinux/config
+写入如下内容，
+SELINUX=disabled
+
+Step3:安装并启动docker
+wget -qO- https://get.docker.com/ | sh
+#以非root用户可以直接运行docker时，需要执行
+sudo usermod -aG docker ${USER}
+sudo service docker start
+```
+
+
+## kubeadm集群安装
+
+```bash
+[master]$ ps -e | grep -i kube
+  1688 pts/0    00:05:40 kubelet
+  2019 ?        00:06:16 kube-apiserver
+  2344 ?        00:00:09 kube-proxy
+  7781 ?        00:03:56 kube-controller
+  7835 ?        00:00:18 kube-scheduler
+
+[node]$ ps -e | grep -i kube  
+  1158 pts/0    00:00:02 kubelet
+  1594 ?        00:00:00 kube-proxy
+```
+
+###
 ```bash
 Example usage:
 
@@ -149,3 +209,57 @@ You can then repeat the second step on as many other machines as you like.
 ```
 
 安装参考(https://blog.csdn.net/qq_14845119/article/details/83349471)
+https://www.cnblogs.com/baylorqu/p/10754924.html
+https://www.jianshu.com/p/2ba3d8c6678d
+
+https://labs.play-with-k8s.com/
+
+
+「Fan: Certificates:
+mkdir $HOME/certs
+cd $HOME/certs
+openssl genrsa -out dashboard.key 2048
+openssl rsa -in dashboard.key -out dashboard.key
+openssl req -sha256 -new -key dashboard.key -out dashboard.csr -subj '/CN=localhost'
+openssl x509 -req -sha256 -days 365 -in dashboard.csr -signkey dashboard.key -out dashboard.crt
+kubectl -n kube-system create secret generic kubernetes-dashboard-certs --from-file=$HOME/certs
+
+Deploy dashboard:
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+
+Check if the replica set is fulfuilled:
+kubectl -n kube-system get rs
+
+Create a PSP:
+kubectl -n kube-system create -f - <<EOF
+apiVersion: extensions/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: dashboard
+spec:
+  privileged: false
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  volumes:
+  - '*'
+EOF
+
+Create a role to allow use of the PSP:
+kubectl -n kube-system create role psp:dashboard --verb=use --resource=podsecuritypolicy --resource-name=dashboard
+
+Bind the role to kubernetes-dashboard service account:
+kubectl -n kube-system create rolebinding kubernetes-dashboard-policy --role=psp:dashboard --serviceaccount=kube-system:kubernetes-dashboard
+kubectl --as=system:serviceaccount:kube-system:kubernetes-dashboard -n kube-system auth can-i use podsecuritypolicy/dashboard
+
+Expose dashboard service on a NodePort:
+Edit the kubernetes-dashboard service and change the following options:
+* spec.type from ClusterIP to NodePort
+* spec.ports[0].nodePort from 32641 to whatever port you want it to be exposed on
+kubectl -n kube-system edit service kubernetes-dashboard
+kubectl -n kube-system get services」
