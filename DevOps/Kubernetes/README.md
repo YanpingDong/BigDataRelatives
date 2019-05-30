@@ -183,6 +183,12 @@ sudo service docker start
 [node]$ ps -e | grep -i kube  
   1158 pts/0    00:00:02 kubelet
   1594 ?        00:00:00 kube-proxy
+
+#Master上进行查看
+[master]$ kubectl get nodes
+NAME    STATUS   ROLES    AGE    VERSION
+node1   Ready    master   170m   v1.14.0
+node2   Ready    <none>   36s    v1.14.0
 ```
 
 ###
