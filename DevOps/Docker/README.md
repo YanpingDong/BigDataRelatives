@@ -52,6 +52,27 @@ sudo usermod -aG docker ${USER}
 sudo service docker start
 ```
 
+## 容器的网络模式
+
+1. None --- 容器不能访问外部网络，内部存在回路地址。
+2. Container --- 将容器的网络栈合并到一起，可与其他容器共享网络。
+3. Host --- 与主机共享网络。
+4. Bridge --- 默认网络模式，通过主机和容器的端口映射（iptable转发）来通信。桥接是在主机上，一般叫docker0。
+5. 自定义网络 --- 主要是为了解决 docker 跨网络通信能力不足的问题和特殊网络需求问题。主要包括：桥接网络、插件网络和Overlay网络（原生的跨主机多子网模型）。
+
+Docker安装后会创建自带的三种网络，可以通过docker network ls查看，通过docker network inspect查看详细信息。
+
+### 虚拟网桥
+
+Docker启动时，自动在主机上创建虚拟网桥docker0，并随机分配一个本地空闲私有网段的一个地址给docker0接口。
+虚拟网桥docker0在内核层连通了其他的物理或虚拟网卡，将所有容器和本地主机都放到同一个网络。
+docker0接口的默认配置包含了IP地址、子网掩码等，可以在docker服务启动的时候进行自定义配置。
+
+![brige](pic/vmbrige.png)
+
+
+[参考](https://blog.csdn.net/anliven/article/details/72888052 )
+
 ## 镜像加速
 
 鉴于国内网络问题，后续拉取 Docker 镜像十分缓慢，我们可以需要配置加速器来解决，我使用的是网易的镜像地址：http://hub-mirror.c.163.com。
