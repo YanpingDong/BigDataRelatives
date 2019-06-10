@@ -70,6 +70,8 @@ docker0接口的默认配置包含了IP地址、子网掩码等，可以在docke
 
 ![brige](pic/vmbrige.png)
 
+Bridge是容器启动的默认网络模式。
+
 
 [参考](https://blog.csdn.net/anliven/article/details/72888052 )
 
@@ -134,7 +136,7 @@ Dockerfile is nothing but the source code for building Docker images
     - ADD \<src\> \<src\> ... \<dest\>  or  ADD ["\<src\>",\<src\> ,...,"\<dest\>"]
   - 操作准则
     - 同COPY指令
-    - 如果\<src\>为URL且\<dest\>不以/结尾，则\<src\>指定的文件将被下载并直接被创建为\<dest\>;如果\<dest\>以/结尾，则文件名URL指定的文件将被直接下载并保存为\<dest\>/\<filename\>
+    - 如果\<src\>为URL且\<dest\>不以```/```结尾，则\<src\>指定的文件将被下载并直接被创建为\<dest\>;如果\<dest\>以```/```结尾，则文件名URL指定的文件将被直接下载并保存为\<dest\>/\<filename\>
     - 如果\<src\>是一个本地系统上的tar文件，它将会被展开为一个目录，其行为类似于“tar -x”命令;然而，通过URL获取到的tar文件将不会自动展开
     - 如果\<src\>有多个，或其间接或直接使用了通配符，则\<dest\>必须是一个以/结尾的目录路径;否则其被视作一个普通文件，\<src\>的内容将被直接写入到\<dest\>
 
@@ -154,14 +156,14 @@ Dockerfile is nothing but the source code for building Docker images
   - 如果挂载点目录路径下此前有文件存在，docker run命令会在卷挂载完成后将此前的所有文件复制到新挂载的卷中
 
 - EXPOSE
-  - 用于为容器打开指定要监听的端口以实现与外部通信,但指定不了宿主机端口，所以是动态绑定到宿主机随意端口，但必需要在启动的时候以docker -P爆露。 所以这里指定的可以理解为默认爆露端口
+  - 用于为容器打开指定要监听的端口以实现与外部通信,但指定不了宿主机端口，所以是动态绑定到宿主机随意端口，但必需要在启动的时候以```docker -P```爆露。 所以这里指定的可以理解为默认爆露端口
   - Syntax
     - EXPOSE \<port\> [/\<protocol\>][\<port\>[/\<protocol\>]...]   \<protocol\>用于指定传输层协议，可为tcp或udp二者之一，默认为TCP
     - EXPOSE指令可一次指定多个端口： EXPOSE 1121/udp 11211/tcp
   - 命令行可以通过-p(小写p)可以指定要映射的端口，并且在一个指定的端口上只可以绑定一个容器。支持的格式有：```IP:HostPort:ContainerPort | IP::ContainerPort | HostPort:ContainerPort ```缺省掉的值都是由宿主机随机映射
 
 - ENV
-  - 用于镜像定义所需的环境变量，并可被Dockerfile文件中位于其后的其它指令（如ENV、ADD、COPY等）所调用;前面即可以在启动的时候指定运行环境变量，后面的则用来指定创建时所需要的变量，分别处理不同阶段，前面是Image运行阶段的事(docker run)，后面是创建Image阶段的事（docker build）
+  - 用于镜像定义所需的环境变量，并可被Dockerfile文件中位于其后的其它指令（如ENV、ADD、COPY等）所调用;即可以在启动的时候指定运行环境变量，也可以用来指定创建时所需要的变量，分别处理不同阶段，运行时指的是Image运行阶段的事(docker run)，创建时指创建Image阶段的事（docker build）。ENV值在运行时可以使用```-e```参数进行覆盖默认值。
   - 请用格式为$variable_name  or  ${variable_name}
   - Syntax
     - ENV \<key\> \<value\>]  or  ENV \<key\>=\<value\>
@@ -173,7 +175,7 @@ Dockerfile is nothing but the source code for building Docker images
   - 用来在docker build过程中运行的程序或命令
   - Syntax
     - RUN \<command\>  or  RUN ["\<executable\>", "\<param1\>", "\<param2\>"]
-  - 第一种格式中， \<command\> 通常是一个shell命令，且以“/bin/sh -c”的模式来运行它,后面的CMD，ENTRYPOINT也一样，这意味着此进程在容器中的PID不为1,不能接收到Unix信号，因此，当命名用docker stop \<container\>命令停止容器时，此进程接收不到SIGTERM信号。（能接到信息的进程是进程号为1的进程）
+  - 第一种格式中， \<command\> 通常是一个shell命令，且以“/bin/sh -c”的模式来运行它,后面的CMD，ENTRYPOINT也一样，这意味着此进程在容器中的PID不为1,不能接收到Unix信号，因此，当使用docker stop \<container\>命令停止容器时，此进程接收不到SIGTERM信号。（能接到信息的进程是进程号为1的进程）
   - 第二中语法格式中的参数是一个**JSON格式的数组**(所以中括号并不是可选项的意思，是必需要存在的)，\<executable\>为要运行的命令，后面的\<paramN\>为传递给命令的选项或参数;然而，此程格式指定的命令不会以“/bin/sh -c”来发起而是直接由系统内核创建或可以理解为用exec来启动的命令，因此常见的shell操作如变量替换以及通配符（？，*等）替换将不会进行;不过，如果要运行的命令依赖于些shell特性的话，可以将其替换为类似以下的式式
     - RUN ["/bin/bash", "-c", "\<executable\>", "\<param1\>", "\<param2\>"]
     - 注意：**JSON格式的数组**中要用双引号
@@ -209,7 +211,7 @@ Dockerfile is nothing but the source code for building Docker images
 
 - ENTRYPOINT
   - 类似CMD指令的功能， 用于为容器指定默认运行程序，从而使得容器像是一个单独可执行程序
-  - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV序设置的环境变量的shell脚本，然后在shell脚本中通过```exec $@```来执行CMD传过来的实际要启动的程序命令。
+  - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV序设置的环境变量的shell脚本，使用脚本设置完运行环境后通过```exec $@```来执行CMD传过来的实际要启动的程序命令。
   - 如果非要改写可以在运行进用```--entrypoint```参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用```docker container run  --entrypoint "/bin/python"  --name sencom image --version```;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
   
     
@@ -232,7 +234,7 @@ Dockerfile is nothing but the source code for building Docker images
     entrypoint.sh部分内容如下：
     ===================================================
     #!/bin.sh
-
+    # 设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
     cat > /etc/my.conf << EOF
     server {
       server_name ${HOSTNAME};
@@ -296,7 +298,7 @@ Dockerfile is nothing but the source code for building Docker images
   - Syntax： STOPSIGNAL signal
 
 - ARG
-  - 定义build-time时使用的变量， builder过程中用--build-arg \<varname\> = \<value\>来使用;而ENV是在running-time进用的
+  - 定义build-time时使用的变量， builder过程中用--build-arg \<varname\> = \<value\>来使用;而ENV是在不仅在build-time时有效，在running-time时出有效
   - 用${varname}来在Dockerfile中引用
 
 - ONBUILD
@@ -355,6 +357,14 @@ RUN echo '<h1>Busybox httpd server</h1>' > /data/web/html/index2.html
 HEALTHCHECK --interval=5m --start-period=10s --timeout=3s CMD wget -O - -q http://localhost/ || exit 1
 
 ENTRYPOINT ["/bin/httpd", "-f", "-h", "/data/web/html/"]
+```
+
+```bash
+NOTE: Linux的默认值设计方法
+
+  ${variable:-word} 代表，如果variable有给值，則以variable設定的文字為主，如未設定，則以word字串为主。
+  ${variable:+word} 代表，如果variable有给值，則值為word；如果variable未給值，則最後結果為空字串(empty)。
+
 ```
 
 ## 基于容器制作
