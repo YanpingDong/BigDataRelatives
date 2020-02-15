@@ -162,10 +162,13 @@ $ vim /etc/selinux/config
 写入如下内容，
 SELINUX=disabled
 
-Step3:安装并启动docker
-wget -qO- https://get.docker.com/ | sh
+Step3:安装并启动docker-ce版本
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
 #以非root用户可以直接运行docker时，需要执行
 sudo usermod -aG docker ${USER}
+#Remember that you will have to log out and back in for this to take effect!
+#提示说需要log out就好，但我在ubuntu下发现需要reboot。docker组是安装docker引擎时候创建的
 sudo service docker start
 ```
 

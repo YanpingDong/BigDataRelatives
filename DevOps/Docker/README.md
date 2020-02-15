@@ -6,9 +6,13 @@ Docker 可以让开发者打包他们的应用以及依赖包到一个轻量级�
 
 容器是完全使用沙箱机制，相互之间不会有任何接口（类似 iPhone 的 app）,更重要的是容器性能开销极低。
 
+从运维的角度来说，就是把开发整体环境（运行环境（nginx,tomcat等）、OS、配置、开发语言（包括版本）、代码、运行依赖包等，只要与程序运行相关的软环境）打包成为镜像，运维部署镜像即可，不考虑环境，减少因为环境原因造成的部署失败。也就是说打破了代码即应用，而变成镜像即应用。`一次封装，到处运行`！！
+
 *Docker 从 17.03 版本之后分为 CE（Community Edition: 社区版） 和 EE（Enterprise Edition: 企业版）。*
 
 *docker理念一个容器运行一个进程！！！*
+
+*image运行起来就是容器*
 
 ## OCI概念
 
@@ -46,9 +50,12 @@ namespace的6种名称空间功能完善内核版本如下图，所以如果想�
 这里只演示ubuntu下的安装
 
 ```bash
-wget -qO- https://get.docker.com/ | sh
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
 #以非root用户可以直接运行docker时，需要执行
 sudo usermod -aG docker ${USER}
+#Remember that you will have to log out and back in for this to take effect!
+#提示说需要log out就好，但我在ubuntu下发现需要reboot。docker组是安装docker引擎时候创建的
 sudo service docker start
 ```
 
@@ -396,6 +403,10 @@ docker save  -o myimages.gz dyp/httpd:v0.2
 docker load  #导入
 docker load -i myimages.gz
 ```
+
+docker各个部件的关系图如下
+
+![](pic/DockerAllPartRelation.png)
 
 ## Docker命令类
 
