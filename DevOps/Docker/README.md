@@ -1,6 +1,6 @@
 # Docker
 
-Docker 是一个开源的应用容器引擎，基于 Go 语言 并遵从Apache2.0协议开源。
+Docker 是一个开源的应用容器引擎,容器运行载体，基于 Go 语言 并遵从Apache2.0协议开源。
 
 Docker 可以让开发者打包他们的应用以及依赖包到一个轻量级、可移植的容器中，然后发布到任何流行的 Linux 机器上，也可以实现虚拟化。
 
@@ -169,7 +169,7 @@ Dockerfile is nothing but the source code for building Docker images
   - Syntax
     - EXPOSE \<port\> [/\<protocol\>][\<port\>[/\<protocol\>]...]   \<protocol\>用于指定传输层协议，可为tcp或udp二者之一，默认为TCP
     - EXPOSE指令可一次指定多个端口： EXPOSE 1121/udp 11211/tcp
-  - 命令行可以通过-p(小写p)可以指定要映射的端口，并且在一个指定的端口上只可以绑定一个容器。支持的格式有：```IP:HostPort:ContainerPort | IP::ContainerPort | HostPort:ContainerPort ```缺省掉的值都是由宿主机随机映射
+  - 命令行可以通过-p(小写p)可以指定要映射的端口(宿主机端口、容器端口都可以设定)，并且在一个指定的端口上只可以绑定一个容器。支持的格式有：```IP:HostPort:ContainerPort | IP::ContainerPort | HostPort:ContainerPort ```缺省掉的值都是由宿主机随机映射
 
 - ENV
   - 用于镜像定义所需的环境变量，并可被Dockerfile文件中位于其后的其它指令（如ENV、ADD、COPY等）所调用;即可以在启动的时候指定运行环境变量，也可以用来指定创建时所需要的变量，分别处理不同阶段，运行时指的是Image运行阶段的事(docker run)，创建时指创建Image阶段的事（docker build）。ENV值在运行时可以使用```-e```参数进行覆盖默认值。
