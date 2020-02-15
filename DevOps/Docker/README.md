@@ -6,11 +6,11 @@ Docker 可以让开发者打包他们的应用以及依赖包到一个轻量级�
 
 容器是完全使用沙箱机制，相互之间不会有任何接口（类似 iPhone 的 app）,更重要的是容器性能开销极低。
 
-Docker 从 17.03 版本之后分为 CE（Community Edition: 社区版） 和 EE（Enterprise Edition: 企业版）。
+*Docker 从 17.03 版本之后分为 CE（Community Edition: 社区版） 和 EE（Enterprise Edition: 企业版）。*
 
 *docker理念一个容器运行一个进程！！！*
 
-## OCI
+## OCI概念
 
 Open Container Initiative，2015年6月创立，围绕容器格式和运行进制定一个开放的工业化标准。由以下两部分组成
 
@@ -30,9 +30,9 @@ Docker守护进程可以直接与主操作系统进行通信，为各个Docker�
 
 ![pic/vmvsdocker.png](pic/vmvsdocker.png)
 
-从结构上来看，容器和虚拟机还是有很大不同的。左图的虚拟机的Guest层，还有Hypervisor层在Docker上已经被Docker Engine层所取代，在这里我们需要知道，Guest OS 是虚拟机安装的操作系统，是一个完整的系统内核，另外Hypervisor可以理解为硬件虚拟化平台，它在后Host OS以内核驱动的形式存在。虚拟机实现资源的隔离的方式是利用独立的Guest OS，以及利用Hypervisor虚拟化CPU、内存、IO等设备来实现的，对于虚拟机实现资源和环境隔离的方案，Docker显然简单很多。
+从结构上来看，容器和虚拟机还是有很大不同的。左图的虚拟机的Guest层，还有Hypervisor层在Docker上已经被Docker Engine层所取代，在这里我们需要知道，Guest OS 是虚拟机安装的操作系统，是一个完整的系统内核，另外Hypervisor可以理解为硬件虚拟化平台，它在Host OS内以内核驱动的形式存在。虚拟机实现资源的隔离的方式是利用独立的Guest OS，以及利用Hypervisor虚拟化CPU、内存、IO等设备来实现的，对于虚拟机实现资源和环境隔离的方案，Docker显然简单很多。
 
-然后Docker并没有和虚拟机一样利用一个独立的Guest OS执行环境的隔离，它利用的是目前当前Linux内核本身支持的容器方式，实现了资源和环境的隔离，简单来说，Docker就是利用Namespace 实现了系统环境的隔离即一个空间不会跨空间看到其它空间，利用了cgroup（control groups）实现了资源的限制即限制使用CPU,Mem等，利用镜像实例实现跟环境的隔离。
+然后Docker并没有和虚拟机一样利用一个独立的Guest OS执行环境的隔离，它利用的是目前Linux内核本身支持的容器方式，实现了资源和环境的隔离，简单来说，Docker就是利用Namespace 实现了系统环境的隔离即一个空间不会跨空间看到其它空间，利用了cgroup（control groups）实现了资源的限制即限制使用CPU,Mem等，利用镜像实例实现跟环境的隔离。
 
 通俗来讲就是多容器从属于同一内核（Host OS）。虚拟机是每一个有自己独立的内核（Guest OS）。
 
@@ -62,10 +62,12 @@ sudo service docker start
 
 Docker安装后会创建自带的三种网络，可以通过docker network ls查看，通过docker network inspect查看详细信息。
 
-### 虚拟网桥
+### 虚拟网桥docker0
 
 Docker启动时，自动在主机上创建虚拟网桥docker0，并随机分配一个本地空闲私有网段的一个地址给docker0接口。
+
 虚拟网桥docker0在内核层连通了其他的物理或虚拟网卡，将所有容器和本地主机都放到同一个网络。
+
 docker0接口的默认配置包含了IP地址、子网掩码等，可以在docker服务启动的时候进行自定义配置。
 
 ![brige](pic/vmbrige.png)
@@ -95,8 +97,8 @@ Bridge是容器启动的默认网络模式。
 
 制做方式
 
-1. Dockerfile
-2. 基于容器制作
+1. 依赖Dockerfile配置制作
+2. 基于已有容器制作
 
 ### Dockerfile
 
@@ -104,7 +106,7 @@ Dockerfile is nothing but the source code for building Docker images
 
 **概念和命令**
 
-- Dockerfile中所有的shell命令都是基于你所创建所用的基础镜像中所拥有的命令,即FROM命令指定的基础镜像中bin中必需有你所使用的命令
+- Dockerfile中所有的shell命令都是基于你所创建的所用的基础镜像中所拥有的命令,即FROM命令指定的基础镜像中bin中必需有你所使用的命令
   
 - .dockerignore文件: ignore some file that you don't want package into image
   
@@ -115,15 +117,15 @@ Dockerfile is nothing but the source code for building Docker images
     - Docker runs instructions in a Dockerfile in order
     - The first instruction must be 'FROM' in order to specify the Base Image from which you are building.(FROM \<repository\>[:\<tag\>] or FROM\<repository\>@\<digest\>)
   
-- Environment replacement : Environment variables (declared with the ENV statement) can also be used in certain instructions as variables to eb interpreted by the Dockerfile, Environment variables are notated in the Dockerfile either with $variable_name or ${variable_name}
+- Environment replacement : Environment variables (declared with the ENV statement) can also be used in certain instructions as variables to be interpreted by the Dockerfile, Environment variables are notated in the Dockerfile either with $variable_name or ${variable_name}
 
-- MAINTAINER(depreacted): MAINTAINER "dyp \<email@email.com\>".  LABEL replace this!Syntax: LABEL \<key\>=\<value\>  \<key\>=\<value\> ... 
+- MAINTAINER(depreacted): MAINTAINER "dyp \<email@email.com\>".  **LABEL replace this!** Syntax: LABEL \<key\>=\<value\>  \<key\>=\<value\> ... 
 
 - COPY: 从Docker主机复制文件到创建的新镜像文件
   - Syntax
     - COPY \<src\> \<src\> ... \<dest\>  or  COPY ["\<src\>",\<src\> ,...,"\<dest\>"]
       - \<src\> : 要复制的源文件或目录，支持使用通配符
-      - \<dest\> : 目标路径，即正在创建 的image的文件系统路径;建议为 \<dest\> 使用绝对路径，否则COPY指定则以WORKDIR为其起始路径
+      - \<dest\> : 目标路径，即正在创建的image的内部文件系统路径;建议为 \<dest\> 使用绝对路径，否则COPY指定则以WORKDIR为其起始路径
       - 注意： 在路径中有空白字符时，通常使用第二种格式   
   - 文件复制准则
     -  \<src\> 必须是build上下文中的路径，不能是Dockerfile文件父目录中的文件
@@ -172,7 +174,7 @@ Dockerfile is nothing but the source code for building Docker images
     - 定义多个变量时，建议使用第二种方式，以便在同一层中完成所有功能
   
 - RUN
-  - 用来在docker build过程中运行的程序或命令
+  - 用来在docker **build过程**中运行的程序或命令
   - Syntax
     - RUN \<command\>  or  RUN ["\<executable\>", "\<param1\>", "\<param2\>"]
   - 第一种格式中， \<command\> 通常是一个shell命令，且以“/bin/sh -c”的模式来运行它,后面的CMD，ENTRYPOINT也一样，这意味着此进程在容器中的PID不为1,不能接收到Unix信号，因此，当使用docker stop \<container\>命令停止容器时，此进程接收不到SIGTERM信号。（能接到信息的进程是进程号为1的进程）
@@ -211,7 +213,7 @@ Dockerfile is nothing but the source code for building Docker images
 
 - ENTRYPOINT
   - 类似CMD指令的功能， 用于为容器指定默认运行程序，从而使得容器像是一个单独可执行程序
-  - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV序设置的环境变量的shell脚本，使用脚本设置完运行环境后通过```exec $@```来执行CMD传过来的实际要启动的程序命令。
+  - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV设置的环境变量的shell脚本，使用脚本设置完运行环境后通过```exec $@```来执行CMD传过来的实际要启动的程序命令。
   - 如果非要改写可以在运行进用```--entrypoint```参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用```docker container run  --entrypoint "/bin/python"  --name sencom image --version```;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
   
     
@@ -298,7 +300,7 @@ Dockerfile is nothing but the source code for building Docker images
   - Syntax： STOPSIGNAL signal
 
 - ARG
-  - 定义build-time时使用的变量， builder过程中用--build-arg \<varname\> = \<value\>来使用;而ENV是在不仅在build-time时有效，在running-time时出有效
+  - 定义build-time时使用的变量， builder过程中用--build-arg \<varname\> = \<value\>来使用;而ENV是在不仅在build-time时有效，在running-time时也有效
   - 用${varname}来在Dockerfile中引用
 
 - ONBUILD
@@ -317,8 +319,8 @@ Dockerfile is nothing but the source code for building Docker images
 #基于busybox最新的版本进行创建镜像
 FROM busybox:latest
 
-#在以该镜像做基础镜像做镜像的时候，会先下载一个nginx到/data/web/nginx1/
-ONBUILD ADD http://nginx.org/download/nginx-1.14.2.tar.gz /data/web/nginx1/
+#在以该镜像做基础镜像做镜像的时候，会先下载一个nginx到/data/web/nginx/
+ONBUILD ADD http://nginx.org/download/nginx-1.14.2.tar.gz /data/web/nginx/
 
 ARG author="lear <lear521@163.com>"
 
@@ -369,7 +371,7 @@ NOTE: Linux的默认值设计方法
 
 ## 基于容器制作
 
-实际是把对一个容器的变更部分变成镜像
+实际是把对一个容器的变更部分变成镜像，也可以死理解成把正在运行的容器制作成镜像。
 
 docker commit [options] container [repository[:tag]]
 
@@ -381,7 +383,7 @@ Options:
   -p, --pause            Pause container during commit (default true)
 ```
 
-*一般会用-p来先暂停容器，避免打包过程种还出现更改。*
+*一般会用-p来先暂停容器，避免打包过程中还出现更改。*
 
 ## 镜像的导入导出
 
