@@ -160,8 +160,8 @@ Dockerfile is nothing but the source code for building Docker images
   - 用于在image中创建一个挂载点目录，以挂载Docker host（宿主机）上的卷或其它容器上的卷
   - Syntax
     - VOLUME \<mountpoint\>   or   VOLUME ["\<mountpoint\>"]
-    - 挂载到宿主机的位置并没有指定，所以docker会自动绑定主机上的一个目录。可以通过```docker inspec NAME|ID```来查看
-    - 通过命令行可以指定宿主机目录：```docker run --name test -it -v /home/xqh/myimage:/data imageName```;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的
+    - 挂载到宿主机的位置并没有指定，所以docker会自动绑定主机上的一个目录。可以通过`docker inspec NAME|ID`来查看
+    - 通过命令行可以指定宿主机目录：`docker run --name test -it -v /home/xqh/myimage:/data imageName`;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的
   - 如果挂载点目录路径下此前有文件存在，docker run命令会在卷挂载完成后将此前的所有文件复制到新挂载的卷中
 
 - EXPOSE
@@ -238,10 +238,10 @@ Dockerfile is nothing but the source code for building Docker images
     #实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
 
     ENTRYPOINT ["/bin/entrypoint.sh"]
-    ===================================================
-    
+    ```
+
     entrypoint.sh部分内容如下：
-    ===================================================
+    ```sh
     #!/bin.sh
     # 设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
     cat > /etc/my.conf << EOF
@@ -253,7 +253,6 @@ Dockerfile is nothing but the source code for building Docker images
     EOF
 
     exec "$@"
-    ===================================================
     ```
 
   - Syntax
@@ -406,7 +405,7 @@ docker load -i myimages.gz
 
 docker各个部件的关系图如下
 
-![](pic/DockerAllPartRelation.png)
+![](./pic/DockerAllPartRelation.png)
 
 ## Docker命令类
 
