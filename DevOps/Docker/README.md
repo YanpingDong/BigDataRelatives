@@ -552,3 +552,6 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 
 ![](pic/validateMySQLStart.png)
 
+3. 
+
+![](pic/mySQLWorkbenchValidation.png)
