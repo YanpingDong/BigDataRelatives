@@ -6,7 +6,11 @@ Docker 可以让开发者打包他们的应用以及依赖包到一个轻量级�
 
 容器是完全使用沙箱机制，相互之间不会有任何接口（类似 iPhone 的 app）,更重要的是容器性能开销极低。
 
-从运维的角度来说，就是把开发整体环境（运行环境（nginx,tomcat等）、OS、配置、开发语言（包括版本）、代码、运行依赖包等，只要与程序运行相关的软环境）打包成为镜像，运维部署镜像即可，不考虑环境，减少因为环境原因造成的部署失败。也就是说打破了代码即应用，而变成镜像即应用。`一次封装，到处运行`！！
+从运维的角度来说，就是把开发整体环境（运行环境（nginx,tomcat等）、OS、配置、开发语言（包括版本）、代码、运行依赖包等，只要与程序运行相关的软环境）打包成为镜像，运维部署镜像即可。部署时候不考虑环境，减少因为环境原因造成的部署失败。也就是说打破了代码即应用，而变成镜像即应用。`一次封装，到处运行`！！
+
+```
+镜像可以理解成轻量级、可执行的独立软件包，用来打包软件运行环境和基于运行环境开发的软件。所以它包含运行软件所需的所有内容，包括代码、运行时、库、环境变量和配置文件。
+```
 
 *Docker 从 17.03 版本之后分为 CE（Community Edition: 社区版） 和 EE（Enterprise Edition: 企业版）。*
 
@@ -149,13 +153,6 @@ Dockerfile is nothing but the source code for building Docker images
     - 如果\<src\>是一个本地系统上的tar文件，它将会被展开为一个目录，其行为类似于“tar -x”命令;然而，通过URL获取到的tar文件将不会自动展开
     - 如果\<src\>有多个，或其间接或直接使用了通配符，则\<dest\>必须是一个以/结尾的目录路径;否则其被视作一个普通文件，\<src\>的内容将被直接写入到\<dest\>
 
-- WORKDIR
-  - 用于为Dockerfile中所有的RUN、CMD、 ENTRYPOINT、COPY和ADD指定设定工作目录
-  - Syntax
-    - WORKDIR \<dirpath\>
-      - 在Dockerfile文件中，WORKDIR指令可出现多次，其路径也可以为相对路径，不过，其是相对此前一个WORKDIR指令指定的路径
-      - WORKDIR可以调用由ENV指定定义的变量（ WORKDIR $STATEPATH ）
-
 - VOLUME
   - 用于在image中创建一个挂载点目录，以挂载Docker host（宿主机）上的卷或其它容器上的卷
   - Syntax
@@ -171,15 +168,46 @@ Dockerfile is nothing but the source code for building Docker images
     - EXPOSE指令可一次指定多个端口： EXPOSE 1121/udp 11211/tcp
   - 命令行可以通过-p(小写p)可以指定要映射的端口(宿主机端口、容器端口都可以设定)，并且在一个指定的端口上只可以绑定一个容器。支持的格式有：```IP:HostPort:ContainerPort | IP::ContainerPort | HostPort:ContainerPort ```缺省掉的值都是由宿主机随机映射
 
+- WORKDIR
+  - 用于为Dockerfile中所有的RUN、CMD、 ENTRYPOINT、COPY和ADD指定设定工作目录。启动后通过docker名利登录到启动容器中的默认路径也是WORKDIR指定的。
+  - Syntax
+    - WORKDIR \<dirpath\>
+      - 在Dockerfile文件中，WORKDIR指令可出现多次，其路径也可以为相对路径，不过，其是相对此前一个WORKDIR指令指定的路径
+      - WORKDIR可以调用由ENV指定定义的变量（ WORKDIR $STATEPATH ）
+
 - ENV
-  - 用于镜像定义所需的环境变量，并可被Dockerfile文件中位于其后的其它指令（如ENV、ADD、COPY等）所调用;即可以在启动的时候指定运行环境变量，也可以用来指定创建时所需要的变量，分别处理不同阶段，运行时指的是Image运行阶段的事(docker run)，创建时指创建Image阶段的事（docker build）。ENV值在运行时可以使用```-e```参数进行覆盖默认值。
+  - 用于镜像定义所需的环境变量，并可被Dockerfile文件中位于其后的其它指令（如ENV、ADD、COPY等）所调用;即可以在启动的时候指定运行环境变量，也可以用来指定创建时所需要的变量，分别处理不同阶段，运行时指的是Image运行阶段的事(docker run)，创建时指创建Image阶段的事（docker build）。ENV值在运行时可以使用`-e`参数进行覆盖默认值。
   - 请用格式为$variable_name  or  ${variable_name}
   - Syntax
     - ENV \<key\> \<value\>]  or  ENV \<key\>=\<value\>
     - 第一种格式中，\<key\> 之后的所有内容均会被视作其 \<value\>的组成部分，因此一次只能设置一个变量
     - 第二种格式可用一次设置多个变量，第个变量为一个\<key\>=\<value\>的键值对，如果\<value\>中包含空格，可以以反斜线（\）进行转义，也可以对\<value\>加引号进行标识;另外，反斜线也可用于续行
     - 定义多个变量时，建议使用第二种方式，以便在同一层中完成所有功能
+
+可以看下面实例，可以看到ENV WORKDIR启动后容器的实际影像，ENV在镜像启动过程中设置了系统环境变量，而WORKDIR设置了PWD
+
+```dockerfile
+FROM centos
+
+ENV mypath /tmp #设置启动系统环境变量mypath=/tmp
+
+WORKDIR $mypath #设置PWD=/tmp
+
+RUN yum -y install vim && yum -y install net-tools
+
+EXPOSE 80
+
+CMD /bin/bash
+```
+
+![](pic/envFeature.png)
   
+```
+  环境变量PWD：显示当前工作路径的环境变量
+ 
+  环境变量OLDPWD：显示上一次的工作路径。
+```
+
 - RUN
   - 用来在docker **build过程**中运行的程序或命令
   - Syntax
@@ -315,8 +343,36 @@ Dockerfile is nothing but the source code for building Docker images
   - 在ONBUILD中使用ADD或COPY指令应该小心，因为新构建过程的上下文可能会缺失文件导致构建失败
   - Syntax
     - ONBUILD \<INSTRUCTION\>
-  
-  
+
+看下面实例：
+
+父镜像创建Dockerfile
+
+```dockerfile
+# myCentosf.dockerfile 
+FROM centos
+
+ONBUILD RUN echo "onbuild running"
+
+RUN yum install -y curl
+ENTRYPOINT ["curl","-s","http://www.baidu.com"]
+```
+然后通过`docker build -f myCentosf.dockerfile -t myipf .`命令创建myipf镜像。
+使用myipf镜像创建子镜像Dockerfile
+
+```dockerfile
+# myCentosc.dockerfile
+FROM myipf
+
+ENV DYP_ENV "I LOVE FAMILY"
+
+ENTRYPOINT ["curl","-s","http://www.baidu.com"]
+```
+
+创建镜像`docker build -f myCentosc.dockerfile -t myipc .`会看到有Executing 1 build trigger提示，然后输出onbuild running
+
+![](pic/onbuildTrigger.png)
+
 **Dockerfile 首字母要大写, 且命令能压缩成一个的尽量做成一个，因为每一个更改命令都成为镜像的一层（分层联合挂载机制）**
 
 **示例**
@@ -406,6 +462,24 @@ docker load -i myimages.gz
 docker各个部件的关系图如下
 
 ![](./pic/DockerAllPartRelation.png)
+
+- Dockerfile用来指导Docker制作镜像
+- Docker镜像是最后部署的交付产品，不再是单纯的源代码
+- Docker容器可以理解成Image的运行态
+
+### 镜像特点
+
+镜像都是**只读*的*，当容器启动时候，一个新的可写层被加载到镜像顶层。这一层通常叫做“容器层”，“容器层”之下的都叫“镜像层”。
+
+一个tomcat的镜像可以用下图描述。
+
+![](pic/imageLayers.png)
+
+分层可以使得“层”被公用，下图可以看到MySQL 5.6和MySQL latest之间的公用部分只需要下载一次,之前下载过的都会显示Already exists
+
+![](pic/imageLayerReuse.png)
+
+
 
 ## Docker命令类
 
