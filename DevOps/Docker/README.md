@@ -433,7 +433,7 @@ NOTE: Linux的默认值设计方法
 
 ## 基于容器制作
 
-实际是把对一个容器的变更部分变成镜像，也可以死理解成把正在运行的容器制作成镜像。
+实际是把对一个容器的变更部分变成镜像，也可以理解成把正在运行的容器制作成镜像。
 
 docker commit [options] container [repository[:tag]]
 
@@ -538,7 +538,7 @@ docker run -p 3306:3306 --name mysql -v /home/tra/MyApp/mysql/conf:/etc/mysql/co
 
 从`docker run`的参数可以看出，启动镜像成为容器，核心是要暴露port和volume。port和宿主机绑定后，只要能通过IP访问到宿主机，那么再加上绑定port就可以理解成，宿主机会转发该port的网络请求信息给容器。（通过mysql workbench验证MySQL安装是很好的实例证明）
 
-而volume是为了让容器的配置和数据可以通过宿主机器直接改变配置和持久化容器的数据到宿主机器。（数据卷绑定后，宿主机和容器是双向同步数据）
+而volume是为了让容器的配置和数据可以通过宿主机器直接改变配置和持久化容器的数据到宿主机器。（数据卷绑定后，宿主机和容器是双向同步数据）。所以在配置的时候，通常考虑这些点：哪些是数据目录需要持久话；哪些是配置目录需要在宿主机上更该；哪些是日志目录需要在宿主机上方便查看。
 
 说白了就是希望通过哪个端口让宿主机在有网络请求时候和容器沟通（绑定容器暴露的PORT），希望容器哪些路径的数据保存到宿主机/启动容器的时候在宿主机哪读取先前数据和配置
 
@@ -572,3 +572,29 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 通过docker执行mysqldump即可
 
 `docker exec containerId sh -c 'exec mysqldump --all-databases -u[name] -p[password]' > /宿主机器路径/文件名.sql` 
+
+
+## redis安装
+
+1. pull `docer pull redis:3.2`
+
+2. run `docker run -p 6379:6379 --name redis -v /home/tra/MyApp/redis/data:/data -v /home/tra/MyApp/redis/config/redis.conf:/usr/local/etc/redis/redis.conf -d redis:3.2 redis-server /usr/local/etc/redis/redis.conf --appendonly yes`
+
+如果想给redis更改配置文件只需要在`/home/tra/MyApp/redis/config/redis.conf`目录里创建redis.conf的配置文件即可。这里会让人迷惑，用过redis的应该知道redis.conf是个目录。
+
+```
+redis:3.2 redis-server /usr/local/etc/redis/redis.conf --appendonly yes
+
+上面部分是在执行redis-server命令，整体意思是redis-server通过/usr/local/etc/redis/redis.conf目录下的配置文件启动，appendonly参数为yes（开启redis持久化）。和我们在本地下载redis，然后在cmd中启动是一样的。
+```
+
+3. 验证`docker exec -it contianerId redis-cli`登录进容器的redis命令行终端，进入后通过set命令存入值，然后shutdown。最后你可以在宿主机器的`/home/tra/MyApp/redis/data`目录下看到appendonly.aof文件
+
+
+# 总结
+
+Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运行image成容器后，可以理解成container是个微型Linux（有基本功能）+通过>导出容器命令运行结果的机器（可以看MySQL数据导出）。所以可以登录该容器，并在该容器运行Linux基础命令，也能把数据导出到宿主机中。登录容器后操作容器中的软件（比如MySQL,Redis或自己写的Springboot程序等）和在一台linux下一模一样。
+
+通过port来成为宿主机器的影子服务器，所有的请求宿主机该port的请求都转给容器。通过volume实现容器和宿主机器数据的同步。
+
+我们应该注意到运行docker的hello-world后用`docker ps -a`查看是停止状态，原因很简单，容器里没有持续运行的任务。如果有持续运行的任务就会是UP。通过MySQL
