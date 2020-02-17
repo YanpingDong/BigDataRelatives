@@ -479,8 +479,6 @@ docker各个部件的关系图如下
 
 ![](pic/imageLayerReuse.png)
 
-
-
 ## Docker命令类
 
 - docker image
@@ -538,6 +536,15 @@ docker pull mysql:5.6
 docker run -p 3306:3306 --name mysql -v /home/tra/MyApp/mysql/conf:/etc/mysql/conf.d -v /home/tra/MyApp/mysql/logs:/logs -v /home/tra/MyApp/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.6
 ```
 
+从`docker run`的参数可以看出，启动镜像成为容器，核心是要暴露port和volume。port和宿主机绑定后，只要能通过IP访问到宿主机，那么再加上绑定port就可以理解成，宿主机会转发该port的网络请求信息给容器。（通过mysql workbench验证MySQL安装是很好的实例证明）
+
+而volume是为了让容器的配置和数据可以通过宿主机器直接改变配置和持久化容器的数据到宿主机器。（数据卷绑定后，宿主机和容器是双向同步数据）
+
+说白了就是希望通过哪个端口让宿主机在有网络请求时候和容器沟通（绑定容器暴露的PORT），希望容器哪些路径的数据保存到宿主机/启动容器的时候在宿主机哪读取先前数据和配置
+
+```
+Docker容器一旦停止，如果没有保存数据到宿主机中，在通过镜像启动后是没以后数据的。因为image中并没保存运行时数据。
+```
 
 ### 查看是否成功启动
 
@@ -552,6 +559,16 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 
 ![](pic/validateMySQLStart.png)
 
-3. 
+3. 通过MySQL Workbench验证
+
+就像是访问本机上安装的MySQL一样，通过localhost:3306直接访问。（如果启动的时候-p绑定的不是3306,这里端口号需要变更）
 
 ![](pic/mySQLWorkbenchValidation.png)
+
+(数据库数据是为了演示，用SQL脚本添加)
+
+**数据导出**
+
+通过docker执行mysqldump即可
+
+`docker exec containerId sh -c 'exec mysqldump --all-databases -u[name] -p[password]' > /宿主机器路径/文件名.sql` 
