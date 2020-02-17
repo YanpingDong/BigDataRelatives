@@ -479,8 +479,6 @@ docker各个部件的关系图如下
 
 ![](pic/imageLayerReuse.png)
 
-
-
 ## Docker命令类
 
 - docker image
@@ -537,7 +535,7 @@ docker pull mysql:5.6
 
 docker run -p 3306:3306 --name mysql -v /home/tra/MyApp/mysql/conf:/etc/mysql/conf.d -v /home/tra/MyApp/mysql/logs:/logs -v /home/tra/MyApp/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.6
 ```
-
+从docker run的参数可以看出，启动镜像成为容器，核心是要暴露port和volum。port和宿主机绑定后，只要能同过IP访问到宿主机，那么再加上绑定port就可以理解成，宿主机会转发该port的信息给容器。而volum是为了让容器的配置和数据可以通过宿主机器直接改变配置和持久化容器的数据到宿主机器。（数据卷绑定后，宿主机和容器是双向同步数据）
 
 ### 查看是否成功启动
 
@@ -552,6 +550,8 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 
 ![](pic/validateMySQLStart.png)
 
-3. 
+3. 通过MySQL Workbench验证
+
+就像是访问本机上安装的MySQL一样，通过localhost:3306直接访问。（如果启动的时候-p绑定的不是3306,这里端口号需要变更）
 
 ![](pic/mySQLWorkbenchValidation.png)
