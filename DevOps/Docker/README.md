@@ -524,3 +524,31 @@ CFS调度算法负责在linux上维护为任务提供处理器时间方面的平
 ```
 Usage:200%代表使用2个cpu
 ```
+
+## 安装MySQL
+
+一般安装过程如下
+1. docker search mysql
+2. docker pull mysql:5.6
+3. docker run 
+
+```bash
+docker pull mysql:5.6
+
+docker run -p 3306:3306 --name mysql -v /home/tra/MyApp/mysql/conf:/etc/mysql/conf.d -v /home/tra/MyApp/mysql/logs:/logs -v /home/tra/MyApp/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.6
+```
+
+
+### 查看是否成功启动
+
+1. 通过docker ps命令查看
+```bash
+tra@tra-ThinkPad-T420:~$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES
+cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago       Up About a minute   0.0.0.0:3306->3306/tcp   mysql
+```
+
+2. 通过exec交互进入容器验证
+
+![](pic/validateMySQLStart.png)
+
