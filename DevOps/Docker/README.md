@@ -159,7 +159,7 @@ Dockerfile is nothing but the source code for building Docker images
     - VOLUME \<mountpoint\>   or   VOLUME ["\<mountpoint\>"]
     - 挂载到宿主机的位置并没有指定，所以docker会自动绑定主机上的一个目录。可以通过`docker inspec NAME|ID`来查看
     - 通过命令行可以指定宿主机目录：`docker run --name test -it -v /home/xqh/myimage:/data imageName`;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的
-  - 如果挂载点目录路径下此前有文件存在，docker run命令会在卷挂载完成后将此前的所有文件复制到新挂载的卷中
+  - 如果挂载点目录路径下此前有文件存在，docker run命令会在卷挂载完成后将此宿主机挂载卷的所有文件复制到容器挂载卷中
 
 - EXPOSE
   - 用于为容器打开指定要监听的端口以实现与外部通信,但指定不了宿主机端口，所以是动态绑定到宿主机随意端口，但必需要在启动的时候以```docker -P```爆露。 所以这里指定的可以理解为默认爆露端口
@@ -203,9 +203,8 @@ CMD /bin/bash
 ![](pic/envFeature.png)
   
 ```
-  环境变量PWD：显示当前工作路径的环境变量
- 
-  环境变量OLDPWD：显示上一次的工作路径。
+环境变量PWD：显示当前工作路径的环境变量
+环境变量OLDPWD：显示上一次的工作路径。
 ```
 
 - RUN
@@ -252,52 +251,52 @@ CMD /bin/bash
   - 如果非要改写可以在运行进用```--entrypoint```参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用```docker container run  --entrypoint "/bin/python"  --name sencom image --version```;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
   
     
-    ```docker
-    Dockerfile部分内容如下
-    ===================================================
-    FROM nginx
-    LABEL maintainer="xxx <xxx@xxx.com>"
+  ```docker
+  Dockerfile部分内容如下
+  ===================================================
+  FROM nginx
+  LABEL maintainer="xxx <xxx@xxx.com>"
 
-    NGX_DOC_ROOT=/data/web/html/
-    ADD entrypint.sh /bin/
+  NGX_DOC_ROOT=/data/web/html/
+  ADD entrypint.sh /bin/
 
-    CMD ["/user/sbin/nginx", "-g", "daemon off;"]
+  CMD ["/user/sbin/nginx", "-g", "daemon off;"]
 
-    #实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
+  #实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
 
-    ENTRYPOINT ["/bin/entrypoint.sh"]
-    ```
+  ENTRYPOINT ["/bin/entrypoint.sh"]
+  ```
 
-    entrypoint.sh部分内容如下：
-    ```sh
-    #!/bin.sh
-    # 设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
-    cat > /etc/my.conf << EOF
-    server {
-      server_name ${HOSTNAME};
-      listen ${IP:-0.0.0.0}:{PORT:-80};
-      root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
-    } 
-    EOF
+  entrypoint.sh部分内容如下：
+  ```sh
+  #!/bin.sh
+  # 设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
+  cat > /etc/my.conf << EOF
+  server {
+    server_name ${HOSTNAME};
+    listen ${IP:-0.0.0.0}:{PORT:-80};
+    root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
+  } 
+  EOF
 
-    exec "$@"
-    ```
+  exec "$@"
+  ```
 
-  - Syntax
-    - ENTRYPOINT  \<command\>   or  ENTRYPOINT ["\<executable\>", "\<param1\>", "\<param2\>"]
-  - docker run 命令传入的命令参数会覆盖CMD指令的内容并且附加到ENTRYPOINT命令最后做为其参数使用
-  - Dockerfile文件中也可以存在多个ENTRYPOINT指令，但仅有最后一个会生效
+- Syntax
+  - ENTRYPOINT  \<command\>   or  ENTRYPOINT ["\<executable\>", "\<param1\>", "\<param2\>"]
+- docker run 命令传入的命令参数会覆盖CMD指令的内容并且附加到ENTRYPOINT命令最后做为其参数使用
+- Dockerfile文件中也可以存在多个ENTRYPOINT指令，但仅有最后一个会生效
 
-    ```
-    Dockerfile:ENTRYPOINT ["/bin/httpd", "-f", "-h", "/data/web/html/"]
-    Docker image instpect imageName：tag输出如下（注：没有ENTRYPOINT的时候是没有以下输出的）
-    "Entrypoint": [
-                    "/bin/httpd",
-                    "-f",
-                    "-h",
-                    "/data/web/html/"
-                ]
-    ```
+```
+Dockerfile:ENTRYPOINT ["/bin/httpd", "-f", "-h", "/data/web/html/"]
+Docker image instpect imageName：tag输出如下（注：没有ENTRYPOINT的时候是没有以下输出的）
+"Entrypoint": [
+                "/bin/httpd",
+                "-f",
+                "-h",
+                "/data/web/html/"
+            ]
+```
 
 - USER
   - 用于指定运行image时或运行Dockerfile中任何RUN、CMD或ENTRYPOINT指令指定的程序时的用户名或UID
@@ -486,7 +485,7 @@ docker各个部件的关系图如下
 - docker container
 - docker logs [-c -f ]
 
-*Ctrl p+q退出交并使运行起来的容器运行在后台。或者在启动的时候用-d参数*
+*Ctrl p q退出交并使运行起来的容器运行在后台（一直压着Ctrl 顺序输入p q）。或者在启动的时候用-d参数*
 
 ## 设置Docker资源限制
 
@@ -597,4 +596,13 @@ Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运�
 
 通过port来成为宿主机器的影子服务器，所有的请求宿主机该port的请求都转给容器。通过volume实现容器和宿主机器数据的同步。
 
-我们应该注意到运行docker的hello-world后用`docker ps -a`查看是停止状态，原因很简单，容器里没有持续运行的任务。如果有持续运行的任务就会是UP。通过MySQL
+```
+所以在暴露port和volume的时候考虑如下问题：
+1. 程序启动后需要用到哪些端口，比如tomcat启动需要8080,SpringBoot程序启动后也需要8080
+2. 软件哪些数据需要持久化和查看、状态需要外部更改
+ 2.1 容器中的软件程序哪些路径下的数据要持久化，那么就volume到宿主机器中
+ 2.2 容器中的软件哪些配置需要更改，那么就volume到宿主机器中
+ 2.3 容器中的哪些信息记录（比如：log）需要外部方便查看，那么就volume到宿主机器中
+```
+
+我们应该注意到运行docker的hello-world后用`docker ps -a`查看是停止状态，原因很简单，容器里没有持续运行的任务。如果有持续运行的任务就会是UP。
