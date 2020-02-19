@@ -130,7 +130,7 @@ Dockerfile is nothing but the source code for building Docker images
     - Docker runs instructions in a Dockerfile in order
     - The first instruction must be 'FROM' in order to specify the Base Image from which you are building.(FROM \<repository\>[:\<tag\>] or FROM\<repository\>@\<digest\>)
   
-- Environment replacement : Environment variables (declared with the ENV statement) can also be used in certain instructions as variables to be interpreted by the Dockerfile, Environment variables are notated in the Dockerfile either with $variable_name or ${variable_name}
+- Environment replacement : Environment variables (declared with the ENV statement) can also be used in certain instructions as variables to be interpreted by the Dockerfile, Environment variables are notated in the Dockerfile either with $variable_name or ${variable_name}。在启动镜像成为容器的时候，设置容器的环境变量，比如：PATH等
 
 - MAINTAINER(depreacted): MAINTAINER "dyp \<email@email.com\>".  **LABEL replace this!** Syntax: LABEL \<key\>=\<value\>  \<key\>=\<value\> ... 
 
@@ -160,11 +160,11 @@ Dockerfile is nothing but the source code for building Docker images
   - Syntax
     - VOLUME \<mountpoint\>   or   VOLUME ["\<mountpoint\>"]
     - 挂载到宿主机的位置并没有指定，所以docker会自动绑定主机上的一个目录。可以通过`docker inspec NAME|ID`来查看
-    - 通过命令行可以指定宿主机目录：`docker run --name test -it -v /home/xqh/myimage:/data imageName`;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的
-  - 如果挂载点目录路径下此前有文件存在，docker run命令会在卷挂载完成后将此宿主机挂载卷的所有文件复制到容器挂载卷中
+    - 通过命令行可以指定宿主机目录：`docker run --name test -it -v /home/xqh/myimage:/data imageName`;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的（指的是启动后，容器中的修改会反应到宿主机绑定目录，反之亦然）。
+  - 如果宿主机挂载点目录路径下此前有文件存在，docker run命令启动会在卷挂载完成后：1.删除容器对应挂载点目录下所有内容。2.将此宿主机挂载卷的所有文件复制到容器挂载卷中。即启动，文件OR文件夹以宿主机为准。
 
 - EXPOSE
-  - 用于为容器打开指定要监听的端口以实现与外部通信,但指定不了宿主机端口，所以是动态绑定到宿主机随意端口，但必需要在启动的时候以```docker -P```爆露。 所以这里指定的可以理解为默认爆露端口
+  - 用于为容器打开指定要监听的端口以实现与外部通信,但指定不了宿主机端口，所以是动态绑定到宿主机随意端口，但必需要在启动的时候以```docker -P```爆露并绑定随机主机端口，如果没有使用EXPOSE指定容器监听端口，`-P`参数是没法绑定端口的。 所以这里指定的可以理解为默认爆露端口。
   - Syntax
     - EXPOSE \<port\> [/\<protocol\>][\<port\>[/\<protocol\>]...]   \<protocol\>用于指定传输层协议，可为tcp或udp二者之一，默认为TCP
     - EXPOSE指令可一次指定多个端口： EXPOSE 1121/udp 11211/tcp
@@ -222,7 +222,7 @@ CMD /bin/bash
   - 类似于RUN指命，CMD指令也可以用于运行任何命令或应用程序，不过，二者的运行时间点不同
     - RUN指令运行于镜像文件构建过程中，而CMD指令运行镜像文件启动一个容器时
     - CMD指令的首要目的在于为启动的容器指定默认要运行的程序，且其运行结束后，容器也将终止;不过，CMD指定的命令其可以被docker run的命令行选项所覆盖
-    - 在Dockerfile中可以存在多个CMD指令，但仅最后一个会生效
+    - 在Dockerfile中可以存在多个CMD指令，但仅**最后一个会生效**
   - Syntax
     - CMD \<command\>  or  CMD ["\<executable\>", "\<param1\>", "\<param2\>"]  or CMD ["\<param1\>", "\<param2\>"]    
     - 前两个语法格式的意义同RUN
@@ -249,41 +249,47 @@ CMD /bin/bash
 
 - ENTRYPOINT
   - 类似CMD指令的功能， 用于为容器指定默认运行程序，从而使得容器像是一个单独可执行程序
-  - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV设置的环境变量的shell脚本，使用脚本设置完运行环境后通过```exec $@```来执行CMD传过来的实际要启动的程序命令。
-  - 如果非要改写可以在运行进用```--entrypoint```参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用```docker container run  --entrypoint "/bin/python"  --name sencom image --version```;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
+  - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV设置的环境变量的shell脚本，使用脚本设置完运行环境后通过`exec $@`来执行CMD传过来的实际要启动的程序命令，因为exec暗含替换旧进程，使用旧进程PID的操作。
+  - 如果非要改写可以在运行进用`--entrypoint`参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用`docker container run  --entrypoint "/bin/python"  --name sencom image --version`;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
   
     
-  ```docker
-  Dockerfile部分内容如下
-  ===================================================
-  FROM nginx
-  LABEL maintainer="xxx <xxx@xxx.com>"
+```docker
+Dockerfile部分内容如下
+===================================================
+FROM nginx
+LABEL maintainer="xxx <xxx@xxx.com>"
 
-  NGX_DOC_ROOT=/data/web/html/
-  ADD entrypint.sh /bin/
+NGX_DOC_ROOT=/data/web/html/
+ADD entrypint.sh /bin/
 
-  CMD ["/user/sbin/nginx", "-g", "daemon off;"]
+CMD ["/user/sbin/nginx", "-g", "daemon off;"]
 
-  #实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
+#实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
 
-  ENTRYPOINT ["/bin/entrypoint.sh"]
-  ```
+ENTRYPOINT ["/bin/entrypoint.sh"]
+```
 
-  entrypoint.sh部分内容如下：
-  ```sh
-  #!/bin.sh
-  # 设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
-  cat > /etc/my.conf << EOF
-  server {
-    server_name ${HOSTNAME};
-    listen ${IP:-0.0.0.0}:{PORT:-80};
-    root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
-  } 
-  EOF
+entrypoint.sh部分内容如下：
+```sh
+#!/bin.sh
+# 向my.conf写入数据，设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
+cat > /etc/my.conf << EOF
+server {
+  server_name ${HOSTNAME};
+  listen ${IP:-0.0.0.0}:{PORT:-80};
+  root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
+} 
+EOF
 
-  exec "$@"
-  ```
+exec "$@"
+```
 
+```
+NOTE:
+在docker中有一个很特殊的进程——PID为1的进程，这也是docker的主进程，通过Dockerfile中的 ENTRYPOINT 和/或 CMD指令指定。当主进程退出的时候，容器所拥有的PIG命名空间就会被销毁，容器的生命周期也会结束docker最佳实践建议的是一个container一个service。所以命令一但执行完毕就会清掉容器，这就造成一个错觉，CMD nginx后理论应该持续运行，但看容器状态的时候确是退出状态。而CMD或ENTRYPOINT是脚本脚本（比如entrypoint.sh）的情况，实际脚本的PID是1的进程，脚本设置好各种运行状态后需要用exec来启动真的服务进程，用到就是exec的特性，可以看下段细节描述。
+
+exec:在bash下输入man exec，找到exec命令解释处，可以看到有"No new process is created. 和 replaces the current process image with a new process image"这样的解释，这就是说exec命令不产生新的子进程。那么exec与source的区别是什么呢？使用exec command方式，会用command进程替换当前shell进程，并且保持PID不变。执行完毕，直接退出，不回到之前的shell环境。docker里面就用了这样的特性启动主进程，docker先启动配置进程，然后使用exec启用主进程把配置进程进行替换，但pid确不变，要不然主进程会成为配置进程的子进程。
+```
 - Syntax
   - ENTRYPOINT  \<command\>   or  ENTRYPOINT ["\<executable\>", "\<param1\>", "\<param2\>"]
 - docker run 命令传入的命令参数会覆盖CMD指令的内容并且附加到ENTRYPOINT命令最后做为其参数使用
@@ -591,6 +597,165 @@ redis:3.2 redis-server /usr/local/etc/redis/redis.conf --appendonly yes
 
 3. 验证`docker exec -it contianerId redis-cli`登录进容器的redis命令行终端，进入后通过set命令存入值，然后shutdown。最后你可以在宿主机器的`/home/tra/MyApp/redis/data`目录下看到appendonly.aof文件
 
+## 创建自己的Nginx镜像
+
+先写好deockerfile。实际上dockerfile里面的命令都可以在FROM的环境中运行。可以理解成，你在环境中需要执行哪些操作，在环境中测试过后，封装到dockerfile里面就好。但不是全部命令都可以，典型的如ADD COPY命令。
+
+```dockerfile
+FROM ubuntu:18.04
+
+RUN apt-get update && apt-get install -y nginx
+
+# clear default nginx web
+RUN cd /var/www/html && rm -rf *
+
+# add index page 
+ADD index.html /var/www/html/
+
+EXPOSE 80
+
+VOLUME [ "/var/www/html/" ]
+
+# If you add a custom CMD in the Dockerfile, be sure to include -g daemon off; 
+# in the CMD in order for nginx to stay in the foreground, 
+# so that Docker can track the process properly 
+# (otherwise your container will stop immediately after starting)!
+CMD [ "/usr/sbin/nginx", "-g", "daemon off;" ] 
+
+```
+
+运行测试过程
+
+```bash
+docker build  -f UbuntuNginx.dockerfile -t mynginx:1.0.0 .
+docker run -it -p 8080:80 -v /home/tra/WorkSpace/html/:/var/www/html/ --name mynginxbin -d mynginx:1.0.0
+curl http://localhost:8080
+```
+
+[源代码](src/MyNginx)
+
+如果通过shell脚本先配置再启动，请参看下面的dockerfile,使用exec在shell脚本中启动nginx以替换shell脚本进程，并占用shell脚本原本PID
+
+```
+# Dockerfile部分内容如下
+
+FROM nginx
+LABEL maintainer="xxx <xxx@xxx.com>"
+
+NGX_DOC_ROOT=/data/web/html/
+ADD entrypint.sh /bin/
+
+CMD ["/user/sbin/nginx", "-g", "daemon off;"]
+
+#实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
+
+ENTRYPOINT ["/bin/entrypoint.sh"]
+```
+
+entrypoint.sh部分内容如下：
+```sh
+#!/bin.sh
+# 向my.conf写入数据，设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
+cat > /etc/my.conf << EOF
+server {
+  server_name ${HOSTNAME};
+  listen ${IP:-0.0.0.0}:{PORT:-80};
+  root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
+} 
+EOF
+
+exec "$@"
+```
+# 容器生命周期
+
+Docker的主进程（PID1进程）是一个很特殊的存在，它的生命周期就是docker container的生命周期，它得对产生的子进程负责，在写Dockerfile的时候，务必明确PID1进程是什么。
+
+来看一个实例
+
+在docker中，对于CMD和 ENTRYPOINT，支持两种进程执行方式：exec和shell。
+以下实例只列举了CMD，ENTRYPOINT同理
+shell的格式是：
+`CMD "executable param1 param2"`
+
+最终转换后的格式是：
+```
+"Cmd": [
+          "/bin/sh",
+          "-c",
+          "executable param1 param2"
+       ]
+```
+
+Exec的格式是:
+`CMD ["executable","param1","param2"]`
+
+最终转换后的格式是：
+```
+"Cmd": [
+          "executable",
+          "param1",
+          "param2"
+       ]
+```
+现在有两个镜像，Dockerfile分别如下：
+
+```dockerfile
+# 镜像redis:shell
+
+FROM ubuntu:14.04
+RUN apt-get update && apt-get -y install redis-server && rm -rf /var/lib/apt/lists/*
+EXPOSE 6379
+CMD "/usr/bin/redis-server"
+
+# 镜像redis:exec
+
+FROM ubuntu:14.04
+RUN apt-get update && apt-get -y install redis-server && rm -rf /var/lib/apt/lists/*
+EXPOSE 6379
+CMD ["/usr/bin/redis-server"]
+```
+
+分别启动
+
+```bash
+docker run -d --name myredis1 redis:shell
+docker run -d --name myredis2 redis:exec
+```
+
+那个docker镜像更好一点呢？
+
+我们前面讲过，PID1进程（主进程）需要对自己的子进程负责，对于redis:shell，它产生的PID1进程是
+
+`/bin/sh -c "/usr/bin/redis-server"`
+
+也就是说，是/bin/sh这个进程，不是/usr/bin/redis-server！/usr/bin/redis-server只是它创建的一个子进程！
+
+执行命令`docker exec myredis1 ps -ef`可以验证这种猜测
+
+
+通过exec方式运行的container的主进程则是我们所期望的。
+
+
+你可能会觉得，这有什么大不了的呢，问题出现当我们停止container的时候。
+
+停止redis:shell
+
+```
+docker stop myredis1
+docker logs myredis1
+```
+
+
+Stop的时候，docker明显停顿了一段时间，而且查看日志可以看出，redis没有做任何保存数据库的操作，直接被强制退出了。这期间发生了什么？首先，运行stop命令会向容器发送 SIGTERM信号，告诉主进程：你该退出了，感觉收拾收拾。但是，这里的主进程是/bin/sh啊，它怎么可能会有处理redis进程退出的机制？所以redis进程不会马上退出。 Docker Daemon等待一段时间之后（默认是10s），发现容器还没有完全退出，这时候就会发送 SIGKILL，将容器强行杀死。在这过程中，redis进程完全不知道自己该退出了，所以他没有做任何收尾的工作。
+
+停止redis:exec
+
+```
+docker stop myredis2
+docker logs myredis2
+```
+
+这一次stop的时候是立即生效了，没有卡顿延迟现象，从输出来看，redis进行了shutdown的操作，把该持久化的数据都保存到磁盘了。因为这时候的PID1进程是/usr/bin/redis-server它是能够正确处理SIGTERM信号的。这才是我们所期望的。
 
 # 总结
 
