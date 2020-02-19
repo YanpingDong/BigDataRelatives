@@ -670,7 +670,9 @@ exec "$@"
 
 Docker的主进程（PID1进程）是一个很特殊的存在，它的生命周期就是docker container的生命周期，它得对产生的子进程负责，在写Dockerfile的时候，务必明确PID1进程是什么。
 
-来看一个实例
+通过Dockerfile中的 ENTRYPOINT 和/或 CMD指令指定。当主进程退出的时候，容器所拥有的PIG命名空间就会被销毁，容器的生命周期也会结束docker最佳实践建议的是一个container一个service。所以命令一但执行完毕就会清掉容器
+
+**来看一个实例**
 
 在docker中，对于CMD和 ENTRYPOINT，支持两种进程执行方式：exec和shell。
 以下实例只列举了CMD，ENTRYPOINT同理
@@ -744,7 +746,6 @@ docker run -d --name myredis2 redis:exec
 docker stop myredis1
 docker logs myredis1
 ```
-
 
 Stop的时候，docker明显停顿了一段时间，而且查看日志可以看出，redis没有做任何保存数据库的操作，直接被强制退出了。这期间发生了什么？首先，运行stop命令会向容器发送 SIGTERM信号，告诉主进程：你该退出了，感觉收拾收拾。但是，这里的主进程是/bin/sh啊，它怎么可能会有处理redis进程退出的机制？所以redis进程不会马上退出。 Docker Daemon等待一段时间之后（默认是10s），发现容器还没有完全退出，这时候就会发送 SIGKILL，将容器强行杀死。在这过程中，redis进程完全不知道自己该退出了，所以他没有做任何收尾的工作。
 
