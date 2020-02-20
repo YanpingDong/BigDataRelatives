@@ -691,7 +691,30 @@ exec "$@"
 
 Docker的主进程（PID1进程）是一个很特殊的存在，它的生命周期就是docker container的生命周期，它得对产生的子进程负责，在写Dockerfile的时候，务必明确PID1进程是什么。
 
-通过Dockerfile中的 ENTRYPOINT 和/或 CMD指令指定。当主进程退出的时候，容器所拥有的PIG命名空间就会被销毁，容器的生命周期也会结束docker最佳实践建议的是一个container一个service。所以命令一但执行完毕就会清掉容器
+通过Dockerfile中的 ENTRYPOINT 和/或 CMD指令指定。当主进程退出的时候，容器所拥有的PIG命名空间就会被销毁，容器的生命周期也会结束docker最佳实践建议的是一个container一个service。所以命令一但执行完毕就会清掉容器。
+
+所以保证容器运行不停止需要下面两个条件：
+
+1. 进程在容器中前台运行，即你不能使用&将进程变成后台运行
+2. 进程本身是持续运行的
+
+简单符要求的实例：
+很简单的while循环脚本
+```bash
+$docker run -d --name ct ubuntu:18.0.4 /bin/sh -c "while true; do echo working; sleep 1; done"
+
+$docker exec ct ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 07:21 ?        00:00:00 /bin/sh -c while true; do echo working; sleep 1; done
+root       107     1  0 07:23 ?        00:00:00 sleep 1
+
+#查看前台logs输出
+$docker logs ct
+working
+working
+working
+... ...
+```
 
 **来看一个实例**
 
@@ -726,19 +749,19 @@ Exec的格式是:
 # 镜像redis:shell
 
 FROM ubuntu:14.04
-RUN apt-get update && apt-get -y install redis-server && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y apt-utils &&  apt-get -y install redis-server && rm -rf /var/lib/apt/lists/*
 EXPOSE 6379
 CMD "/usr/bin/redis-server"
 
 # 镜像redis:exec
 
-FROM ubuntu:14.04
-RUN apt-get update && apt-get -y install redis-server && rm -rf /var/lib/apt/lists/*
+FROM ubuntu:18.04
+RUN apt-get update && apt-get install -y apt-utils &&  apt-get -y install redis-server && rm -rf /var/lib/apt/lists/*
 EXPOSE 6379
 CMD ["/usr/bin/redis-server"]
 ```
 
-分别启动
+**分别启动**
 
 ```bash
 docker run -d --name myredis1 redis:shell
@@ -747,21 +770,40 @@ docker run -d --name myredis2 redis:exec
 
 那个docker镜像更好一点呢？
 
-我们前面讲过，PID1进程（主进程）需要对自己的子进程负责，对于redis:shell，它产生的PID1进程是
+**shell启动**
 
-`/bin/sh -c "/usr/bin/redis-server"`
+我们前面讲过，PID=1进程（主进程）需要对自己的子进程负责，对于redis:shell，它产生的PID1进程是`/bin/sh -c "/usr/bin/redis-server"`
 
-也就是说，是/bin/sh这个进程，不是/usr/bin/redis-server！/usr/bin/redis-server只是它创建的一个子进程！
+也就是说，是/bin/sh这个进程，不是/usr/bin/redis-server！
 
-执行命令`docker exec myredis1 ps -ef`可以验证这种猜测
+/usr/bin/redis-server只是它创建的一个子进程！
 
+执行命令`docker exec myredis1 ps -ef`可以验证这种猜测,如下所示`/bin/sh -c "/usr/bin/redis-server"`的进程的PID=1而`/usr/bin/redis-server`的PID是6
 
+```bash
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 05:53 ?        00:00:00 /bin/sh -c "/usr/bin/redis-server"
+root         6     1  0 05:53 ?        00:00:00 /usr/bin/redis-server *:6379
+root        10     0 20 05:54 ?        00:00:00 ps -ef
+
+```
+
+**exec启动**
+
+执行命令`docker exec myredis2 ps -ef`可以验证`/usr/bin/redis-server`进程PID=1
+
+```bash
+$ docker exec myredis2 ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  1 06:13 ?        00:00:00 /usr/bin/redis-server *:6379
+root         9     0  0 06:13 ?        00:00:00 ps -ef
+```
 通过exec方式运行的container的主进程则是我们所期望的。
 
 
-你可能会觉得，这有什么大不了的呢，问题出现当我们停止container的时候。
+你可能会觉得，这有什么大不了的呢，问题出现当我们停止container的时候。这个时候是否会有退出程序处理就很关键了。
 
-停止redis:shell
+**停止redis:shell**
 
 ```
 docker stop myredis1
@@ -770,7 +812,7 @@ docker logs myredis1
 
 Stop的时候，docker明显停顿了一段时间，而且查看日志可以看出，redis没有做任何保存数据库的操作，直接被强制退出了。这期间发生了什么？首先，运行stop命令会向容器发送 SIGTERM信号，告诉主进程：你该退出了，感觉收拾收拾。但是，这里的主进程是/bin/sh啊，它怎么可能会有处理redis进程退出的机制？所以redis进程不会马上退出。 Docker Daemon等待一段时间之后（默认是10s），发现容器还没有完全退出，这时候就会发送 SIGKILL，将容器强行杀死。在这过程中，redis进程完全不知道自己该退出了，所以他没有做任何收尾的工作。
 
-停止redis:exec
+**停止redis:exec**
 
 ```
 docker stop myredis2
@@ -778,6 +820,55 @@ docker logs myredis2
 ```
 
 这一次stop的时候是立即生效了，没有卡顿延迟现象，从输出来看，redis进行了shutdown的操作，把该持久化的数据都保存到磁盘了。因为这时候的PID1进程是/usr/bin/redis-server它是能够正确处理SIGTERM信号的。这才是我们所期望的。
+
+## 守护式容器
+
+了解了PID1的进程，我们就清楚只要让PID1的进程不退出，容器就不会关闭。如果能和启动Linux后台运行进程一样启动容器，那就是守护式容器。
+
+需要保证容器中的PID1的进程不能结束！！！
+
+守护式容器的特点：
+
+1. 可以长期运行
+2. 没有交互式会话
+
+方式一:
+
+```bash
+$docker run -i -t image /bin/bash
+ctrl p q 退出
+# 然后用ps看进程
+$ docker exec containerId ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 02:39 pts/0    00:00:00 /bin/bash
+root        11     0  0 03:57 ?        00:00:00 ps -ef
+```
+
+方式二：
+
+```bash
+$docker run -d image
+
+# 容器中CMD/ENTRYPOINT启动的进程是前台进程并且不退出，否则容器会关闭
+
+# 比如CMD ["/bin/bash"] 运行完成后直接退出
+```
+
+常用的几个查看、执行命令:
+```
+dokcer logs：看容器日志
+
+docker top : 看运行容器进程
+
+docker exec ：在运行的容器中执行命令 -i交互 -t分配TTY。
+从下面的实例可以看出，exec -i -t会在容器里新开一个进程。而PID=1的进程是启动容器时启动的，比如通过“方式一”启动的。只要PID=1没结束，容器就会一直纯在
+docker exec -i -t contianerId /bin/bash
+root@contianerId:/# ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 02:39 pts/0    00:00:00 /bin/bash
+root        16     0  6 04:03 pts/1    00:00:00 /bin/bash
+root        25    16  0 04:03 pts/1    00:00:00 ps -ef
+```
 
 # 总结
 
