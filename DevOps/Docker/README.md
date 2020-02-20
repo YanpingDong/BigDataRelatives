@@ -272,36 +272,36 @@ CMD /bin/bash
     ```
   - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV设置的环境变量的shell脚本，使用脚本设置完运行环境后通过`exec $@`来执行CMD传过来的实际要启动的程序命令，因为exec暗含替换旧进程，使用旧进程PID的操作。
 
-```docker
-Dockerfile部分内容如下
-===================================================
-FROM nginx
-LABEL maintainer="xxx <xxx@xxx.com>"
+  Dockerfile内容如下:
 
-NGX_DOC_ROOT=/data/web/html/
-ADD entrypint.sh /bin/
+  ```docker
+  FROM nginx
+  LABEL maintainer="xxx <xxx@xxx.com>"
 
-CMD ["/user/sbin/nginx", "-g", "daemon off;"]
+  NGX_DOC_ROOT=/data/web/html/
+  ADD entrypint.sh /bin/
 
-#实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
+  CMD ["/user/sbin/nginx", "-g", "daemon off;"]
 
-ENTRYPOINT ["/bin/entrypoint.sh"]
-```
+  #实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
 
-entrypoint.sh部分内容如下：
-```sh
-#!/bin.sh
-# 向my.conf写入数据，设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
-cat > /etc/my.conf << EOF
-server {
-  server_name ${HOSTNAME};
-  listen ${IP:-0.0.0.0}:{PORT:-80};
-  root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
-} 
-EOF
+  ENTRYPOINT ["/bin/entrypoint.sh"]
+  ```
 
-exec "$@"
-```
+  entrypoint.sh内容如下：
+  ```sh
+  #!/bin.sh
+  # 向my.conf写入数据，设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
+  cat > /etc/my.conf << EOF
+  server {
+    server_name ${HOSTNAME};
+    listen ${IP:-0.0.0.0}:{PORT:-80};
+    root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
+  } 
+  EOF
+
+  exec "$@"
+  ```
 
   - 如果非要改写可以在运行进用`--entrypoint`参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用`docker container run  --entrypoint "/bin/python"  --name sencom image --version`;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
 
