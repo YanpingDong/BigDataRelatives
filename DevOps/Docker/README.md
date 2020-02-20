@@ -38,7 +38,7 @@ Docker守护进程可以直接与主操作系统进行通信，为各个Docker�
 
 说了这么多Docker的优势，大家也没有必要完全否定虚拟机技术，因为两者有不同的使用场景。虚拟机更擅长于彻底隔离整个运行环境。例如，云服务提供商通常采用虚拟机技术隔离不同的用户。而Docker通常用于隔离不同的应用，例如前端，后端以及数据库。
 
-![pic/vmvsdocker.png](pic/vmvsdocker.png)
+![](./pic/vmvsdocker.png)
 
 从结构上来看，容器和虚拟机还是有很大不同的。左图的虚拟机的Guest层，还有Hypervisor层在Docker上已经被Docker Engine层所取代，在这里我们需要知道，Guest OS 是虚拟机安装的操作系统，是一个完整的系统内核，另外Hypervisor可以理解为硬件虚拟化平台，它在Host OS内以内核驱动的形式存在。虚拟机实现资源的隔离的方式是利用独立的Guest OS，以及利用Hypervisor虚拟化CPU、内存、IO等设备来实现的，对于虚拟机实现资源和环境隔离的方案，Docker显然简单很多。
 
@@ -83,7 +83,7 @@ Docker启动时，自动在主机上创建虚拟网桥docker0，并随机分配�
 
 docker0接口的默认配置包含了IP地址、子网掩码等，可以在docker服务启动的时候进行自定义配置。
 
-![brige](pic/vmbrige.png)
+![](pic/vmbrige.png)
 
 Bridge是容器启动的默认网络模式。
 
@@ -119,7 +119,7 @@ Dockerfile is nothing but the source code for building Docker images
 
 **概念和命令**
 
-- Dockerfile中所有的shell命令都是基于你所创建的所用的基础镜像中所拥有的命令,即FROM命令指定的基础镜像中bin中必需有你所使用的命令
+- Dockerfile中所有的shell命令都是基于你所创建的所用的基础镜像中所拥有的命令,即FROM命令指定的基础镜像中必需有你所使用的命令
   
 - .dockerignore文件: ignore some file that you don't want package into image
   
@@ -160,7 +160,7 @@ Dockerfile is nothing but the source code for building Docker images
   - Syntax
     - VOLUME \<mountpoint\>   or   VOLUME ["\<mountpoint\>"]
     - 挂载到宿主机的位置并没有指定，所以docker会自动绑定主机上的一个目录。可以通过`docker inspec NAME|ID`来查看
-    - 通过命令行可以指定宿主机目录：`docker run --name test -it -v /home/xqh/myimage:/data imageName`;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的（指的是启动后，容器中的修改会反应到宿主机绑定目录，反之亦然）。
+    - 通过命令行可以指定宿主机目录：`docker run --name test -it -v /home/xqh/myimage:/data imageName`;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的（指的是启动后，容器中的修改会反应到宿主机绑定目录，反之亦然;启动时完全以宿主机文件为主）。
   - 如果宿主机挂载点目录路径下此前有文件存在，docker run命令启动会在卷挂载完成后：1.删除容器对应挂载点目录下所有内容。2.将此宿主机挂载卷的所有文件复制到容器挂载卷中。即启动，文件OR文件夹以宿主机为准。
 
 - EXPOSE
@@ -249,10 +249,29 @@ CMD /bin/bash
 
 - ENTRYPOINT
   - 类似CMD指令的功能， 用于为容器指定默认运行程序，从而使得容器像是一个单独可执行程序
+  - Syntax
+    - ENTRYPOINT \<command\>  or  ENTRYPOINT ["\<executable\>", "\<param1\>", "\<param2\>"] 
+
+    ```docker
+    Dockerfile：ENTRYPOINT /bin/httpd -f -h /data/web/html/
+    Docker image instpect imageName：tag输出如下
+    "Entrypoint": [
+                    "/bin/sh",
+                    "-c",
+                    "/bin/httpd -f -h /data/web/html/"
+                ]
+
+    Dockerfile：ENTRYPOINT ["/bin/httpd", "-f", "-h", "/data/web/html/"]
+    Docker image instpect imageName：tag输出如下
+    "Entrypoint": [
+                    "/bin/httpd",
+                    "-f",
+                    "-h",
+                    "/data/web/html/"
+                ]
+    ```
   - 与CMD不同的是，由ENTRYPOINT启动的程序不会被docker run命令行指定的参数所覆盖，而且，这些命令行参数会被当作参数传递给ENTRYPOINT指定的程序。可以用这种方式把ENTRYPOINT指定成依赖ENV设置的环境变量的shell脚本，使用脚本设置完运行环境后通过`exec $@`来执行CMD传过来的实际要启动的程序命令，因为exec暗含替换旧进程，使用旧进程PID的操作。
-  - 如果非要改写可以在运行进用`--entrypoint`参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用`docker container run  --entrypoint "/bin/python"  --name sencom image --version`;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
-  
-    
+
 ```docker
 Dockerfile部分内容如下
 ===================================================
@@ -283,6 +302,8 @@ EOF
 
 exec "$@"
 ```
+
+  - 如果非要改写可以在运行进用`--entrypoint`参数，比如在一个镜像中有/bin/python命令，那么我们想看一下版本但ENTRYPOINT设定不可能是python --version，这个时候我们可以使用`docker container run  --entrypoint "/bin/python"  --name sencom image --version`;从上示例可以发现--version的参数并没有直接跟在python命令后，而是在image名字后面跟着，这就是上面说的“命令行参数会被当作参数传递给ENTRYPOINT指定的程序”即python程序。
 
 ```
 NOTE:
