@@ -597,6 +597,8 @@ ACCEPT     tcp  --  0.0.0.0/0            172.17.0.3           tcp dpt:80
 root@7ab643ebb877:/# curl 172.17.0.2 
 ```
 
+在同宿主机器的都容器，可以通过宿主机iptables控制，那么多宿主机情况下使用iptables就更能控制了多机器了，使用方式和没有容器时候的多服务器联通控制一样。
+
 ## Docker命令类
 
 - docker image
