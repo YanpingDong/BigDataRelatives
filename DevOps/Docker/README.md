@@ -666,6 +666,8 @@ root@7ab643ebb877:/# curl 172.17.0.2
 
 #### 使用网桥配置多主机
 
+可以使用网桥把不同宿主机的容器挂在同一网段。
+
 Step1：修改/etc/default/docker配置文件的DOCKER_OPTS选项加入，-b指定自定义网桥，--fixed-cidr限制ip地地址范围（10.211.55.5/26）
 
 Step2：通过网桥管理工具创建配置网桥，但重启后会失效，所以一般通过配置/etc/network/interfaces,示例如下：
