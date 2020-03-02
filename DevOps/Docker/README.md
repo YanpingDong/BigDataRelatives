@@ -513,19 +513,80 @@ docker0接口的默认配置包含了IP地址、子网掩码等，可以在docke
 
 ![](pic/vmbrige.png)
 
-Bridge是容器启动的默认网络模式。
+可以通过命令行查看网桥和其对应的docker0虚拟网卡
 
+```bash
+$ brctl show
+bridge name	bridge id		STP enabled	interfaces
+docker0		8000.0242fdb180be	no		veth1e06ee1
+$ ifconfig
+docker0   Link encap:Ethernet  HWaddr 02:42:fd:b1:80:be  
+          inet addr:172.17.0.1  Bcast:172.17.255.255  Mask:255.255.0.0
+          inet6 addr: fe80::42:fdff:feb1:80be/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:8420 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:8458 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:580668 (580.6 KB)  TX bytes:12569663 (12.5 MB)
+
+```
+
+Bridge是容器启动的默认网络模式。
 
 [参考](https://blog.csdn.net/anliven/article/details/72888052 )
 
 ### Docker容器与外网
 
-容器之间的互通实际是通过容器的iptables来控制的。通过下面的实例，可以证明一下两点：
+docker容器之间与网络相关的命令
+
+```
+如果需要使用宿主机器的iptables管理docker容器的互联，需要在/etc/default/docker配置文件添加 DOCKER_OPTS="=-icc=false --iptables = true"，然后容器网络就可以别宿主机器iptables管理
+
+NOTE: -icc是关闭默认链接，然后设置--iptables=true。启动容器时候，让互联容器用--link启动就可以控制容器之间的链接。
+
+--link：docker启动选项
+$ docker run --link=[container_name]:[alias] [image] [command] 
+
+E.G.:
+$ docker run -it --name test --link=testweb:webtest your_image /bin/bash
+$ ping webtest
+是可以ping到testweb的容器，并且在设置了--iptables=true后会自动设置宿主机的ipteables使两个容器能互联。而且在docker停止后再次启动两容器的ip即使变化了，test也是能通过webtest连接上testweb容器。这是因为启动test容器的时候会动态设置test容器中的env环境变量和hosts文件使webtest名字指向testweb容器的ip地址和端口
+
+$ env 示例:
+WEBTEST_PORT_80_TCP_ADDR=xxx.xxx.xxx.xxx
+WEBTEST_PORT_80_TCP=tcp://xxx.xxx.xxx.xxx:80
+WEBTEST_PORT=tcp://xxx.xxx.xxx.xxx:80
+WEBTEST_PORT_80_TCP_PORT=90
+WEBTEST_PORT_80_TCP_PROTO=tcp
+
+$ cat /etc/hosts
+xxx.xxx.xxx.xxx    webtest
+```
+
+通过上面描述了解到，docker启动增加了`--iptables = true`参数后，容器之间的互通实际是通过容器的iptables来控制的。那先看下iptables的4表5链，其运行流程如下图：
+
+![](pic/IptablesFilterLinks.png)
+
+四表：
+- filter表——过滤数据包
+- Nat表——用于网络地址转换（IP、端口）
+- Mangle表——修改数据包的服务类型、TTL、并且可以配置路由实现QOS
+- Raw表——决定数据包是否被状态跟踪机制处理
+
+五链：
+- INPUT链——进来的数据包应用此规则链中的策略
+- OUTPUT链——外出的数据包应用此规则链中的策略
+- FORWARD链——转发数据包时应用此规则链中的策略
+- PREROUTING链——对数据包作路由选择前应用此链中的规则（所有的数据包进来的时侯都先由这个链处理）
+- POSTROUTING链——对数据包作路由选择后应用此链中的规则（所有的数据包出来的时侯都先由这个链处理）
+
+
+通过下面的实例，可以证明以下两点：
 
 1. 在不做限制的时候，容器之间是无障碍联通
 2. 通过iptables设置宿主机器，可以控制容器联通
 
-使用下面的dockerfile创建用来测试容器互通的镜像，包含了测试过程中需要的工具，ping、curl、ifconfig等
+使用下面的dockerfile创建用来测试容器互通的镜像，包含了测试过程中需要的工具，ping、curl、ifconfig等。
 
 ```dockerfile
 FROM ubuntu:18.04
@@ -534,7 +595,7 @@ EXPOSE 80
 CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
 ```
 
-创建镜像，并启动容器
+Step1：创建镜像，并启动容器
 
 ```bash
 $docker build -f netTest.dockerfile  -t cct:1.0.1 .
@@ -544,7 +605,7 @@ $docker run -d -P --name cct101 cct:1.0.1
 $docker run -it -P --name cct101c cct:1.0.1 /bin/bash
 ```
 
-查看两个容器启动后的iptables状态，可以看到DOCKER子链上多了两个记录，通过docker exec containerId ifconfig查看，能匹配容器ip地址
+Step2：查看两个容器启动后的iptables状态，可以看到DOCKER子链上多了两个记录，通过docker exec containerId ifconfig查看，能匹配容器ip地址
 
 ```bash
 $sudo iptables -L -n
@@ -582,7 +643,7 @@ Commercial support is available at
 </html>
 ```
 
-上面的测试说名联通性没有问题，那么我们现在在宿主机器上设置iptables禁止两机器联通，配置与测试如下。
+Step3：上面的测试说名联通性没有问题，那么我们现在在宿主机器上设置iptables禁止两机器联通，配置与测试如下。
 
 ```bash
 $sudo iptables -I DOCKER -s 172.17.0.3 -d 172.17.0.2 -p TCP --dport 80 -j DROP
@@ -598,6 +659,25 @@ root@7ab643ebb877:/# curl 172.17.0.2
 ```
 
 在同宿主机器的都容器，可以通过宿主机iptables控制，那么多宿主机情况下使用iptables就更能控制了多机器了，使用方式和没有容器时候的多服务器联通控制一样。
+
+### 跨宿主机链接
+
+实际上跨主机连接仍然靠的是iptables，如果宿主机没有禁止外网连接，那么只需要知道容器绑定的宿主机端口和宿主机容器IP，然后在另一台宿主机中就可以通过【`需要连接的宿主机容器IP：需要连接的容器绑定的宿主机端口`】就可以访问到。
+
+#### 使用网桥配置多主机
+
+Step1：修改/etc/default/docker配置文件的DOCKER_OPTS选项加入，-b指定自定义网桥，--fixed-cidr限制ip地地址范围（10.211.55.5/26）
+
+Step2：通过网桥管理工具创建配置网桥，但重启后会失效，所以一般通过配置/etc/network/interfaces,示例如下：
+
+```
+auto br0
+ifcace br0 inet static #设置静态IP
+address 10.211.55.5
+netmask 255.255.255.0
+gateway 10.211.55.1
+bridge_ports eth0　＃指定物理机网卡，重启后用ifconfig查看，eth0不再具有自己的IP地址，这样实际是br0网桥和宿主机网卡进行了绑定
+```
 
 ## Docker命令类
 
