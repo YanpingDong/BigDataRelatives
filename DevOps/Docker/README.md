@@ -141,7 +141,7 @@ Dockerfile is nothing but the source code for building Docker images
     - VOLUME \<mountpoint\>   or   VOLUME ["\<mountpoint\>"]
     - 挂载到宿主机的位置并没有指定，所以docker会自动绑定主机上的一个目录。可以通过`docker inspec NAME|ID`来查看
     - 通过命令行可以指定宿主机目录：`docker run --name test -it -v /home/xqh/myimage:/data imageName`;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的（指的是启动后，容器中的修改会反应到宿主机绑定目录，反之亦然;启动时完全以宿主机文件为主）。
-  - 如果宿主机挂载点目录路径下此前有文件存在，docker run命令启动会在卷挂载完成后：1.删除容器对应挂载点目录下所有内容。2.将此宿主机挂载卷的所有文件复制到容器挂载卷中。即启动，文件OR文件夹以宿主机为准。
+  - 如果宿主机挂载点目录路径下此前有文件存在，docker run命令启动会在卷挂载完成后：1.覆盖容器中挂载点同名文件，如果是目录则覆盖目录中同名文件。2.将此容器中宿主机没有的文件拷贝到宿主机中。启动完成后，双向同步数据的修改。
 
 ```dockerfile
 #MyJenkins.dockerfile
