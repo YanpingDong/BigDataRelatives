@@ -136,11 +136,80 @@ Dockerfile is nothing but the source code for building Docker images
 
 - VOLUME
   - 用于在image中创建一个挂载点目录，以挂载Docker host（宿主机）上的卷或其它容器上的卷
+  - 父镜像声明过的卷在子镜像中是写不进去文件的。见下面示例。
   - Syntax
     - VOLUME \<mountpoint\>   or   VOLUME ["\<mountpoint\>"]
     - 挂载到宿主机的位置并没有指定，所以docker会自动绑定主机上的一个目录。可以通过`docker inspec NAME|ID`来查看
     - 通过命令行可以指定宿主机目录：`docker run --name test -it -v /home/xqh/myimage:/data imageName`;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的（指的是启动后，容器中的修改会反应到宿主机绑定目录，反之亦然;启动时完全以宿主机文件为主）。
   - 如果宿主机挂载点目录路径下此前有文件存在，docker run命令启动会在卷挂载完成后：1.删除容器对应挂载点目录下所有内容。2.将此宿主机挂载卷的所有文件复制到容器挂载卷中。即启动，文件OR文件夹以宿主机为准。
+
+```dockerfile
+#MyJenkins.dockerfile
+FROM jenkins:2.60.3
+
+USER root
+
+RUN mkdir -p /var/maven_home && cd /var/maven_home \
+    && wget -P /var/maven_home http://mirrors.tuna.tsinghua.edu.cn/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
+    && tar -zxvf apache-maven-3.6.3-bin.tar.gz \
+    && pwd && ls && id
+
+VOLUME /var/maven_home
+
+# this step is not necessary
+RUN chown -R jenkins /var/maven_home
+
+USER jenkins
+
+ENV MAVEN_HOME /var/maven_home/apache-maven-3.6.3 
+ENV PATH $MAVEN_HOME/bin:$PATH
+```
+
+构建镜像myjenkins
+```bash
+$docker build -f MyJenkins.dockerfile -t myjenkins:1.0.0 .
+```
+
+使用myjenkins:1.0.0构建子镜像,并在父镜像声明的`/var/maven_home`中下载go文件，并解压
+
+```dockerfile
+#CMyJenkins.dockerfile
+FROM myjenkins:1.0.0
+
+USER root
+
+RUN cd /var/maven_home \
+    && wget -P /var/maven_home https://dl.google.com/go/go1.14.linux-amd64.tar.gz\
+    && tar -zxvf go1.14.linux-amd64.tar.gz \
+    && pwd && ls && id
+
+USER jenkins
+```
+构建镜像cmyjenkins，可以看到命令输出是有文件的，但当我们启动的时候去`/var/maven_home`目录看只能看到父镜像的文件，go相关文件并不存在，即使在CMyJenkins.dockerfile添加VOLUME /var/maven_home也不可以
+```bash
+$docker build -f CMyJenkins.dockerfile -t cmyjenkins:1.0.0 .
+
+#ls && id输出如下
+go/test/utf.go
+go/test/varerr.go
+go/test/varinit.go
+go/test/writebarrier.go
+go/test/zerodivide.go
+/var/maven_home
+apache-maven-3.6.3
+apache-maven-3.6.3-bin.tar.gz
+go
+go1.14.linux-amd64.tar.gz
+uid=0(root) gid=0(root) groups=0(roo
+
+#启动cmyjenkins容器
+
+$docker run -it --entrypoint="/bin/bash" cmyjenkins:1.0.0 -c "/bin/bash"
+
+#容器/var/maven_home查看，没有go文件
+jenkins@41a14c16d455:/var/maven_home$ ls
+apache-maven-3.6.3  apache-maven-3.6.3-bin.tar.gz
+```
 
 - EXPOSE
   - 用于为容器打开指定要监听的端口以实现与外部通信,但指定不了宿主机端口，所以是动态绑定到宿主机随意端口，但必需要在启动的时候以```docker -P```爆露并绑定随机主机端口，如果没有使用EXPOSE指定容器监听端口，`-P`参数是没法绑定端口的。 所以这里指定的可以理解为默认爆露端口。
@@ -307,7 +376,7 @@ Docker image instpect imageName：tag输出如下（注：没有ENTRYPOINT的时
 ```
 
 - USER
-  - 用于指定运行image时或运行Dockerfile中任何RUN、CMD或ENTRYPOINT指令指定的程序时的用户名或UID
+  - 用于指定运行image时或运行Dockerfile中USER命令滞后的，任何RUN、CMD或ENTRYPOINT指令指定的程序时的用户名或UID。但ADD，COPY命令依旧是root用户
   - 默认情况下，container的运行身份为root用户
   - Syntax
     - USER \<UID\>|\<UserName\> 
@@ -662,7 +731,7 @@ root@7ab643ebb877:/# curl 172.17.0.2
 
 ### 跨宿主机链接
 
-实际上跨主机连接仍然靠的是iptables，如果宿主机没有禁止外网连接，那么只需要知道容器绑定的宿主机端口和宿主机容器IP，然后在另一台宿主机中就可以通过【`需要连接的宿主机容器IP：需要连接的容器绑定的宿主机端口`】就可以访问到。
+实际上跨主机连接仍然靠的是iptables，如果宿主机没有禁止外网连接，那么只需要知道容器绑定的宿主机端口和宿主机容器IP，然后在另一台宿主机中就可以通过【`需要连接的宿主机容器IP：需要连接的容器绑定的宿主机端口`】就可以访问到。但如过想直接通过容器IP地址访问容器服务，则需要下面方式。
 
 #### 使用网桥配置多主机
 
@@ -1060,3 +1129,5 @@ Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运�
 ```
 
 我们应该注意到运行docker的hello-world后用`docker ps -a`查看是停止状态，原因很简单，容器里没有持续运行的任务。如果有持续运行的任务就会是UP。
+
+https://blog.csdn.net/babys/article/details/71170254
