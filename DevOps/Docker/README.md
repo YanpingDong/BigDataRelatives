@@ -840,7 +840,29 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 
 `docker exec containerId sh -c 'exec mysqldump --all-databases -u[name] -p[password]' > /宿主机器路径/文件名.sql` 
 
+## jenkins安装
 
+官方docker库：https://hub.docker.com/r/jenkins/jenkins
+
+官方使用文档：https://github.com/jenkinsci/docker/blob/master/README.md
+
+**简单启动过程**
+
+1. docker pull jenkins/jenkins:lt
+2. docker run --name myjenkins -p 8000:8080 -p 50000:50000 -v /home/tra/DockerRunTime/jenkinsRT:/var/jenkins_home jenkins/jenkins:lts
+3. localhost:8000登录
+
+```
+NOTE:
+1. /home/tra/DockerRunTime/jenkinsRT目录宿主机改成了 chmod 777
+
+2. 启动的时候注意下面的小字，保存初始化密码。如果不保存也会在登录页面提示在什么地方去找。可以使用docker exec -it containerId "/bin/bash"进入容器查看，或者在宿主机column中查看
+Jenkins initial setup is required. An admin user has been created and a password generated.
+Please use the following password to proceed to installation:
+
+a3db14756b674fdaa8271abe608ecf1a
+
+```
 ## redis安装
 
 1. pull `docer pull redis:3.2`
