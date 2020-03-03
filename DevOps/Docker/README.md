@@ -190,11 +190,6 @@ USER jenkins
 $docker build -f CMyJenkins.dockerfile -t cmyjenkins:1.0.0 .
 
 #ls && id输出如下
-go/test/utf.go
-go/test/varerr.go
-go/test/varinit.go
-go/test/writebarrier.go
-go/test/zerodivide.go
 /var/maven_home
 apache-maven-3.6.3
 apache-maven-3.6.3-bin.tar.gz
