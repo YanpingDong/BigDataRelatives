@@ -3,14 +3,17 @@
 Ansible 是一个模型驱动的配置管理器，支持多节点发布、远程任务执行。默认使用 SSH 进行远程连接。无需在被管理节点上安装附加软件，可使用各种编程语言进行扩展。
 
 1. Python 阵营的配置管理器
-2. 不用帮每台机器 (instance) 预安装 agent ，**只要有 SSH 和 Python 就可以闯天下！**
+2. 不用帮每台机器 (instance) 预安装 agent ，**只要有 SSH 和 Python 就可以闯天下！**。只要SSH能登录到远端机器，那么ansible就可以。
 3. 4 大主流的配置管理器(Puppet, SaltStack, Chef, Ansible) 中， Ansible 是最容易上手，且马上就可以用的工具。
 
 ```
 登录远程计算机方式：
-1. 可以使用ssh通过命令登录形式进行远程机器管理。在/etc/ansible/hosts里配置ansible_ssh_pass=‘密码’ + 命令行-u运行参数来指定用户（也可以设置/etc/ansible/ansible.cfg中设置remote_user来设置默认登录远端用户名）
+1. 可以使用ssh通过命令登录形式进行远程机器管理。在/etc/ansible/hosts（默认的inventory文件）里配置ansible_ssh_pass=‘密码’ + 命令行-u运行参数来指定用户（也可以设置/etc/ansible/ansible.cfg中设置remote_user来设置默认登录远端用户名）
 2. 或者配置ssh免密登录
+
+即配置好ssh连接远端机器，ssh可以生效后ansible就可以使用。可以把ansible就当成ssh使用，可以想想成ansible通过ssh发送命令到远端执行，即可以执行ansible的功能模块操作远端和可以同时操作多个远端。
 ```
+
 ## 安装
 
 ```bash
@@ -19,15 +22,57 @@ or
 sudo pip install ansible
 ```
 
+完成后可以做以下测试（不需要做任何配置）
+
+```bash
+$ ansible --version
+ansible 2.0.0.2
+  config file = /etc/ansible/ansible.cfg
+  configured module search path = Default w/o overrides
+
+$ ansible localhost -m ping
+localhost | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+```
+
+**ssh的配置可以和ansible共用**
+
+比如，一般情况下我们都会在~/.ssh/config配置ssh的连接信息，简化ssh的使用。比如config中已经配好了免密连接如下：
+
+```
+# ~/.ssh/config文件部分配置,免密登录
+Host test_server
+ user your_name
+ Hostname 52.90.174.93
+ IdentityFile ~/.ssh/github_rsa
+```
+
+只需要把Host名test_server加到/etc/ansible/hosts中就可以了，ansible会通过ssh使用到配置信息，不需要添加用户名，主机IP，秘钥文件等。
+
+```
+#/etc/ansible/hosts
+[my_server]
+test_server
+
+$ ansible my_server -m ping
+dev-video | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+```
+
 ## 基本架构
 
 ![ansible_framework](pic/ansible_framework.png)
 
 图为ansible的基本架构，从上图可以了解到其由以下部分组成：
 
-- 核心模块（Core Modules）：这些都是ansible自带的模块
-- 扩展模块（Custom Modules）：如果核心模块不足以完成某种功能，可以添加扩展模块
-- 插件（Plugins）：完成模块功能的补充
+- Modules：完成具体功能
+  - 核心模块（Core Modules）：这些都是ansible自带的模块
+  - 扩展模块（Custom Modules）：如果核心模块不足以完成某种功能，可以添加扩展模块
+- 插件（Plugins）：完成模块功能的补充，比如Email，Logging等
 - 剧本（Playbooks）：ansible的任务配置文件，将多个任务定义在剧本中，由ansible自动执行
 - 连接插件（Connectior Plugins）：ansible基于连接插件连接到各个主机上，虽然ansible是使用ssh连接到各个主机的，但是它还支持其他的连接方法，所以需要有连接插件
 - 主机群（Host Inventory）：定义ansible管理的主机
@@ -37,14 +82,31 @@ sudo pip install ansible
 
 1. ansible的默认配置文件路径为 /etc/ansible
 
-```bash
-$ ansible --version
-ansible 2.0.0.2
-  config file = /etc/ansible/ansible.cfg
-  configured module search path = Default w/o overrides
+    ```bash
+    $ ansible --version
+    ansible 2.0.0.2
+      config file = /etc/ansible/ansible.cfg
+      configured module search path = Default w/o overrides
+    ```
 
-```
 2. 通常我们较偏爱把 ansible.cfg 和 hosts 这两个档案与其它的 Playbooks 放在同个专案目录底下，然后通过版本控制系统 (例如 Git) 把它们一起储存起来，以实现 Ansible 的 Infrastructure as Code！
+
+## 命令格式
+
+格式 : **command target option module module_option cmd**
+
+command: ansible命令
+target: 需要执行命令的目标主机或群组。hosts里的分组或分组下的具体机器
+option: ansible命令选项
+module: 需要用到的模块
+module_opiton: 指定模块中的参数
+cmd: 模块中的可用的命令
+
+比如：
+
+command |target |  option| module
+---|---|---|----
+ansible| my_server| -m |ping
 
 ### Inventory文件
 
@@ -68,9 +130,22 @@ ansible_shell_type     #目标系统的shell的类型，默认sh
 ansible_connection     #SSH 连接的类型： local , ssh , paramiko，在 ansible 1.2 之前默认是 paramiko ，后来智能选择，优先使用基于 ControlPersist 的 ssh （支持的前提）
 ansible_python_interpreter     #用来指定python解释器的路径，默认为/usr/bin/python 同样可以指定ruby 、perl 的路径
 ansible_*_interpreter     #其他解释器路径，用法与ansible_python_interpreter类似，这里"*"可以是ruby或才perl等
+
+示例：
+[local]
+localhost ansible_ssh_user=learlee ansible_ssh_pass="password"
+
+$ ansible local -m ping
+localhost | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+
 ```
 
-**免密登录设軒到.ssh目录下的config文件下也是可以的，只需要把配置到config的host放到ansible的hosts配置文件中即可**
+**在.ssh目录下的config文件下已经设置过的ssh配置（比如免密登录），只需要把配置到config文件中的的host名放到ansible的hosts配置文件中即可**
+
+一些配置示例：
 
 ```
 mail.example.com
@@ -84,14 +159,14 @@ one.example.com
 two.example.com
 three.example.com
 
-#如果有主机的SSH端口不是标准的22端口,可在主机名之后加上端口号,用冒号分隔.SSH 配置文件中列出的端口号不会在 paramiko 连接中使用,会在 openssh 连接中使用.
+#如果有主机的SSH端口不是标准的22端口,可在主机名之后加上端口号,用冒号分隔。SSH 配置文件中列出的端口号不会在 paramiko 连接中使用,会在 openssh 连接中使用。
 badwolf.example.com:5309
 
 #有一些静态IP地址,希望设置一些别名,但不是在系统的 host 文件中设置,又或者你是通过隧道在连接,那么可以设置如下:
 jumper ansible_ssh_port=5555 ansible_ssh_host=192.168.1.50
 [other]
 jumper
-或
+或合并写也可以
 [other]
 jumper ansible_ssh_port=5555 ansible_ssh_host=192.168.1.50
 
@@ -135,7 +210,7 @@ escape_pods=2
 
 假设 inventory 文件的路径为:/etc/ansible/hosts
 
-假设有一个主机名为 ‘foosball’, 主机同时属于两个组,一个是 ‘raleigh’, 另一个是 ‘webservers’. 那么以下配置文件(YAML 格式)中的变量可以为 ‘foosball’ 主机所用.依次为 ‘raleigh’ 的组变量,’webservers’ 的组变量,’foosball’ 的主机变量:
+假设有一个主机名为 ‘foosball’, 主机同时属于两个组,一个是 ‘raleigh’, 另一个是 ‘webservers’. 那么以下配置文件(YAML格式)中的变量可以为 ‘foosball’ 主机所用。依次为 ‘raleigh’ 的组变量,’webservers’ 的组变量,’foosball’ 的主机变量:
 
 ```
 /etc/ansible/group_vars/raleigh
@@ -143,7 +218,7 @@ escape_pods=2
 /etc/ansible/host_vars/foosball
 ```
 
-举例来说,假设你有一些主机,属于不同的数据中心,并依次进行划分.每一个数据中心使用一些不同的服务器.比如 ntp 服务器, database 服务器等等. 那么 ‘raleigh’ 这个组的组变量定义在文件 ‘/etc/ansible/group_vars/raleigh’ 之中,可能类似这样:
+举例来说,假设你有一些主机,属于不同的数据中心,并依次进行划分.每一个数据中心使用一些不同的服务器.比如 ntp 服务器, database 服务器等等。那么 ‘raleigh’ 这个组的组变量定义在文件 ‘/etc/ansible/group_vars/raleigh’ 之中,可能类似这样:
 
 ```
 ---
@@ -153,14 +228,14 @@ database_server: storage.example.org
 
 **这些定义变量的文件不是一定要存在,因为这是可选的特性.**
 
-还有更进一步的运用,你可以为一个主机,或一个组,创建一个目录,目录名就是主机名或组名.目录中的可以创建多个文件, 文件中的变量都会被读取为主机或组的变量.如下 ‘raleigh’ 组对应于 /etc/ansible/group_vars/raleigh/ 目录,其下有两个文件 db_settings和cluster_settings, 其中分别设置不同的变量:
+还有更进一步的运用,你可以为一个主机,或一个组,创建一个目录,目录名就是主机名或组名。目录中的可以创建多个文件, 文件中的变量都会被读取为主机或组的变量.如下 ‘raleigh’ 组对应于 /etc/ansible/group_vars/raleigh/ 目录,其下有两个文件 db_settings和cluster_settings, 其中分别设置不同的变量:
 
 ```
 /etc/ansible/group_vars/raleigh/db_settings
 /etc/ansible/group_vars/raleigh/cluster_settings
 ```
 
-‘raleigh’ 组下的所有主机,都可以使用 ‘raleigh’ 组的变量.当变量变得太多时,分文件定义变量更方便我们进行管理和组织. 还有一个方式也可参考,详见 Ansible Vault 关于组变量的部分. 注意,分文件定义变量的方式只适用于 Ansible 1.4 及以上版本.
+‘raleigh’ 组下的所有主机,都可以使用 ‘raleigh’ 组的变量。当变量变得太多时,分文件定义变量更方便我们进行管理和组织。 还有一个方式也可参考,详见 Ansible Vault 关于组变量的部分。 注意,分文件定义变量的方式只适用于 Ansible 1.4 及以上版本。
 
 #### 动态 Inventory
 
@@ -170,7 +245,7 @@ database_server: storage.example.org
 
 **脚本规约**
 
-用于生成 JSON 的脚本对实现语言没有要求，它可以是一个可执行脚本、二进制文件，或者其他任何可以运行文件，但是必须输出为 JSON 格式.
+用于生成 JSON 的脚本对实现语言没有要求，它可以是一个可执行脚本、二进制文件，或者其他任何可以运行文件，但是必须输出为 JSON 格式。格式示例如下
 
 ```json
 {
@@ -200,12 +275,14 @@ database_server: storage.example.org
 ```
 
 
-**脚本实现**
+**脚本代替hosts静态管理**
+
+比如有如下静态管理：
 
 ```
 [group1]
-127.0.0.1
- 
+localhost ansible_ssh_user=learlee ansible_ssh_pass="password"
+
 [group2]
 192.168.13.128
 192.168.13.5
@@ -215,7 +292,8 @@ ansible_ssh_port=5555
 ansible_connection=ssh
 ```
 
-dynamic_investory.py。这个脚本可以从外部来请求数据比如访问自己的配置服务器，但这里为了简化所以直接返回Json
+可以通过python来实现并通过print输出，dynamic_investory.py实现方式如下：
+
 ```python
 #!/usr/bin/python
 #coding = utf-8
@@ -223,18 +301,47 @@ dynamic_investory.py。这个脚本可以从外部来请求数据比如访问自
 import json
 group1 = 'group1'
 group2 = 'group2'
-hosts1 = ['127.0.0.1']
+hosts1 = ['localhost']
 hosts2 = ['192.168.13.128', '192.168.13.5']
-vars = {'ansible_ssh_host':'127.0.0.1', 'ansible_ssh_port':32768,'ansible_ssh_pass':'docker'}
-hostdata = {group1:{"hosts": hosts1, "vars": vars}, group2:{"hosts": hosts2, "vars": vars}}
+vars1 = {'ansible_ssh_user':"learlee",'ansible_ssh_pass':'password'}
+vars2 = {'ansible_ssh_port':5555,'ansible_connection':'ssh'}
+hostdata = {group1:{"hosts": hosts1, "vars": vars1}, group2:{"hosts": hosts2, "vars": vars2}}
 print(json.dumps(hostdata, indent=4))
 
 ```
+
+python脚本输出为
+
+```bash
+$ python3 myInv.py
+{
+    "group1": {
+        "hosts": [
+            "localhost"
+        ],
+        "vars": {
+            "ansible_ssh_user": "learlee",
+            "ansible_ssh_pass": "  "
+        }
+    },
+    "group2": {
+        "hosts": [
+            "192.168.13.128",
+            "192.168.13.5"
+        ],
+        "vars": {
+            "ansible_ssh_port": 5555,
+            "ansible_connection": "ssh"
+        }
+    }
+}
+```
+
 **使用**
 
 ```bash
 # 可以指定组
-$ ansible -i hostlist.py group1 -m ping
+$ ansible -i dynamic_investory.py group1 -m ping
 127.0.0.1 | SUCCESS => {
     "changed": false, 
     "ping": "pong"
@@ -251,20 +358,21 @@ $ ansible -i hostlist.py group1 -m ping
 Ad hoc 这个单字是来自拉丁文常用短语中的一个短语，通常用来形容为一个特定的问题或任务而专门设定的解决方案 1。Ad-Hoc Commands 可以翻译为简短地指令，从以下的例子中可以看到 Ad-Hoc commands 一次只能处理一件事情，这即是它与 Playbooks 最大的差异。
 
 ```bash
-$ ansible all -m ping
-server1 | SUCCESS => {
+$ ansible localhost -m ping
+localhost | SUCCESS => {
     "changed": false,
     "ping": "pong"
 }
 
-$ ansible all -m command -a "echo Hello World"
-server1 | SUCCESS | rc=0 >>
+$ ansible localhost -m command -a "echo Hello World"
+localhost | SUCCESS | rc=0 >>
 Hello World
 ```
 
 ### Playbooks 是什么？
 
 Playbook 就字面上的意思为剧本。我们可以通过事先写好的剧本 (Playbooks) 来让各个 Managed Node 进行指定的动作 (Plays) 和任务 (Tasks)。简而言之，Playbooks 是 Ansible 的脚本 (Script)，而且还是个比传统 Shell Script 还强大数百倍的脚本。
+
 - 使用YAML格工，简单易读
 - 可使用Jinja2表达式，并支持变量、判断、循环等语法
 
