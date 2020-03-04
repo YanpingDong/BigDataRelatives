@@ -848,7 +848,7 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 
 **简单启动过程**
 
-1. docker pull jenkins/jenkins:lt
+1. docker pull jenkins/jenkins:lts
 2. docker run --name myjenkins -p 8000:8080 -p 50000:50000 -v /home/tra/DockerRunTime/jenkinsRT:/var/jenkins_home jenkins/jenkins:lts
 3. localhost:8000登录
 
