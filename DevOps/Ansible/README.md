@@ -310,7 +310,7 @@ print(json.dumps(hostdata, indent=4))
 
 ```
 
-python脚本输出为
+python脚本输出为：
 
 ```bash
 $ python3 myInv.py
@@ -371,7 +371,7 @@ Hello World
 
 ### Playbooks 是什么？
 
-Playbook 就字面上的意思为剧本。我们可以通过事先写好的剧本 (Playbooks) 来让各个 Managed Node 进行指定的动作 (Plays) 和任务 (Tasks)。简而言之，Playbooks 是 Ansible 的脚本 (Script)，而且还是个比传统 Shell Script 还强大数百倍的脚本。
+Playbook 就字面上的意思为剧本。我们可以通过事先写好的剧本 (Playbooks) 来让各个 Managed Node 进行指定的动作 (Plays) 和任务 (Tasks)。简而言之，Playbooks 是 Ansible 的脚本 (Script)，而且还是个比传统 Shell Script 还强大数百倍的脚本。直接通过`ansible-playbook playbook_name.yml`运行
 
 - 使用YAML格工，简单易读
 - 可使用Jinja2表达式，并支持变量、判断、循环等语法
@@ -379,31 +379,71 @@ Playbook 就字面上的意思为剧本。我们可以通过事先写好的剧�
 在一份 Playbook 中，可以有多个 Play、多个 Task 和多个 Module。
 
 -  Play：通常为某个特定的目的，例如：
-     - Setup a official website with Drupal (借由 Drupal 建置官网)
+     - Setup a official website with Drupal (通过 Drupal 创建官网)
      - Restart the API service (重开 API 服务)
 -  Task：是要实行 Play 这个目地所需做的每个步骤，例如：
      - Install the Nginx (安裝 Nginx)
-     - Kill the djnago process (强制停止 django 的行程)
--  Module：Ansible 所提供的各种操作方法，例如：
+     - Kill the django process (强制停止 django 的进程)
+-  Module：Ansible 所提供的各种具体操作方法，例如：
      - apt: name=vim state=present (使用 apt 套件安装 vim)
      - command: /sbin/shutdown -r now (使用 shutdown 的指令重新开机)
 
-一个Playbook如下：
+一个简单Playbook(hello_world.yml)如下：
 
 ```yml
 ---
-
+#play
 - name: say 'hello world'
-  hosts: all
+  hosts: localhost
   tasks:
-
+    # task
     - name: echo 'hello world'
+      # module
       command: echo 'hello world'
       register: result
-
+    # task
     - name: print stdout
+      # module
       debug:
-        msg: ""
+          msg: '{{result}}'
+```
+
+运行结果如下：
+
+```bash
+$ ansible-playbook hello_world.yml
+
+PLAY [say 'hello world'] *******************************************************
+
+TASK [setup] *******************************************************************
+ok: [localhost]
+
+TASK [echo 'hello world'] ******************************************************
+changed: [localhost]
+
+TASK [print stdout] ************************************************************
+ok: [localhost] => {
+    "msg": {
+        "changed": true, 
+        "cmd": [
+            "echo", 
+            "hello world"
+        ], 
+        "delta": "0:00:00.002052", 
+        "end": "2020-03-04 16:57:23.204219", 
+        "rc": 0, 
+        "start": "2020-03-04 16:57:23.202167", 
+        "stderr": "", 
+        "stdout": "hello world", 
+        "stdout_lines": [
+            "hello world"
+        ], 
+        "warnings": []
+    }
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=3    changed=1    unreachable=0    failed=0 
 ```
 
 #### Ansible 常用的 Ansible Module
@@ -434,7 +474,7 @@ Playbook 就字面上的意思为剧本。我们可以通过事先写好的剧�
     state: absent
 ```
 
-**command** : command module 是个可以在远端上执行指令的指令模组 (Commands Modules)，刚入门 Ansible 会用 module 不多？只要 Linux Shell 会通的指令都可以透过它使用。但它不支持变数 (variables) 和 <, >, |, ; 和 & 等运算，若有这类需求请改用 shell module。
+**command** : command module 是个可以在远端上执行指令的指令模组 (Commands Modules)，刚入门 Ansible 会用 module 不多？只要 Linux Shell 能用的指令都可以透过它在远端执行。但它不支持变数 (variables) 和 <, >, |, ; 和 & 等运算，若有这类需求请改用 shell module。
 
 ```yml
 #重新开机。
@@ -592,7 +632,7 @@ Playbook 就字面上的意思为剧本。我们可以通过事先写好的剧�
 
 ```
 
-** setup**
+**setup**
 
 使用 Playbooks 时，Ansible 会自动执行 setup module 以收集各个 Managed node 的 facts。这个 facts 就如同系统变量一样，从 IP 位址、作业系统、CPU 等资讯应有尽有，可以在写Playbooks的时候用来做判断
 
@@ -601,34 +641,39 @@ This module is automatically called by playbooks to gather useful variables abou
 ```
 
 ```bash
-$ ansible all -m setup | less
-server1 | SUCCESS => {
-   "ansible_facts": {
-       "ansible_all_ipv4_addresses": [
-           "172.19.0.2"
-       ],
-       "ansible_all_ipv6_addresses": [
-           "fe80::42:acff:fe13:2"
-       ]
+$ ansible localhost -m setup 
+localhost | SUCCESS => {
+    "ansible_facts": {
+        "ansible_all_ipv4_addresses": [
+            "172.17.0.1", 
+            "10.120.137.37"
+        ], 
+        "ansible_all_ipv6_addresses": [
+            "fe80::42:fdff:feb1:80be", 
+            "fe80::2dd9:7fe4:a4f8:c965", 
+            "fe80::dc9c:74ff:feff:d870"
+        ], 
+        "ansible_architecture": "x86_64", 
+        "ansible_bios_date": "08/07/2014", 
        ... ...
 #搭配 filter 将发行版本 (distribution) 的资讯给过滤出来。
-$ ansible all -m setup -a "filter=ansible_distribution*"
-server1 | SUCCESS => {
-   "ansible_facts": {
-       "ansible_distribution": "Ubuntu",
-       "ansible_distribution_major_version": "14",
-       "ansible_distribution_release": "trusty",
-       "ansible_distribution_version": "14.04"
-   },
-   "changed": false
+$ ansible localhost -m setup -a "filter=ansible_distribution*"
+localhost | SUCCESS => {
+    "ansible_facts": {
+        "ansible_distribution": "Ubuntu", 
+        "ansible_distribution_major_version": "16", 
+        "ansible_distribution_release": "xenial", 
+        "ansible_distribution_version": "16.04"
+    }, 
+    "changed": false
 }
+
 ```
 
 通过撰写跨 Linux distribution 的 Playbooks来演示如何使用以上信息
 
 ```yml
 #建立支持 Debian, Ubuntu, CentOS 安装 Vim 的 playbook。
-
 ---
 
 - name: Setup the vim 
@@ -646,7 +691,7 @@ server1 | SUCCESS => {
      when: ansible_pkg_mgr == "yum"
 ```
 
-**template** : 可以用它和变量 (Variables) 来操作档案。我们只需事先定义变量和模板 (Templates)，即可用它动态产生远端的 Shell Scripts、设定档 (Configure) 等。换句话说，我们可以用一份 template 来产生开发 (Development)、测试 (Test) 和正式环境 (Production) 等不同的环境设定。
+**template** : 可以用它和变量 (Variables) 来操作档案。我们只需事先定义变量和模板 (Templates)，即可用它动态产生远端的 Shell Scripts、设定 (Configure) 等。换句话说，我们可以用一份 template 来产生开发 (Development)、测试 (Test) 和正式环境 (Production) 等不同的环境设定。
 
 举例说明：
 
@@ -686,6 +731,36 @@ $ vi template_demo.yml
 通过 -e 参数将 dynamic_word 覆写成 ansible。
 
 $ ansible-playbook template_demo.yml -e "dynamic_word=ansible"
+```
+
+运行输出如下：
+
+```bash
+$ ansible-playbook template_demo.yml 
+
+PLAY [Play the template module] ************************************************
+
+TASK [setup] *******************************************************************
+ok: [localhost]
+
+TASK [generation the hello_world.txt file] *************************************
+ok: [localhost]
+
+TASK [show file context] *******************************************************
+changed: [localhost]
+
+TASK [print stdout] ************************************************************
+ok: [localhost] => {
+    "msg": "result"
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=4    changed=1    unreachable=0    failed=0   
+
+$ more /tmp/hello_world.txt 
+
+ Hello "World"
+
 ```
 
 **此外, Ansible 使用 “{{ var }}” 来引用变量. 如果一个值以 “{” 开头, YAML 将认为它是一个字典, 所以我们必须引用它, 像这样:foo: "{{ variable }}"**
@@ -754,23 +829,74 @@ Playbook 同样可以使用 include 引用其他 playbook 文件中的 play。�
 ```yml
 ---
 # possibly saved as tasks/foo.yml
-
-- name: placeholder foo
-  command: /bin/foo
-
-- name: placeholder bar
-  command: /bin/bar
+# task
+- name: echo 'hello world'
+  # module
+  command: echo 'hello world'
+  register: result
+# task
+- name: print stdout
+  # module
+  debug:
+    msg: '{{result}}'
 ```
 
 在一个 playbook 中，Include 指令可以跟普通的 task 混合在一起使用:
 
 ```yml
-tasks:
+---
+#play rootFoo.yml 
+- name: say 'hello world'
+  hosts: localhost
+  tasks:
+    - include: tasks/foo.yml
 
-  - include: tasks/foo.yml
+```
 
-#也可以给 include 传递变量。我们称之为 ‘参数化的 include’。如果我们要部署多个 wordpress 实例，我们可将所有的 wordpress task 写在一个 wordpress.yml 文件中， 然后像下面这样使用 wordpress.yml 文件:
+运行结果
 
+```bash
+$ ansible-playbook rootFoo.yml 
+
+PLAY [say 'hello world'] *******************************************************
+
+TASK [setup] *******************************************************************
+ok: [localhost]
+
+TASK [include] *****************************************************************
+included: /home/learlee/WorkSpace/Ansible/tasks/foo.yml for localhost
+
+TASK [echo 'hello world'] ******************************************************
+changed: [localhost]
+
+TASK [print stdout] ************************************************************
+ok: [localhost] => {
+    "msg": {
+        "changed": true, 
+        "cmd": [
+            "echo", 
+            "hello world"
+        ], 
+        "delta": "0:00:00.002085", 
+        "end": "2020-03-04 17:41:17.599327", 
+        "rc": 0, 
+        "start": "2020-03-04 17:41:17.597242", 
+        "stderr": "", 
+        "stdout": "hello world", 
+        "stdout_lines": [
+            "hello world"
+        ], 
+        "warnings": []
+    }
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=4    changed=1    unreachable=0    failed=0 
+```
+
+也可以给 include 传递变量。我们称之为 ‘参数化的 include’。如果我们要部署多个 wordpress 实例，我们可将所有的 wordpress task 写在一个 wordpress.yml 文件中， 然后像下面这样使用 wordpress.yml 文件:
+
+```yml
 tasks:
   - include: wordpress.yml wp_user=timmy
   - include: wordpress.yml wp_user=alice
@@ -781,7 +907,7 @@ handlers:
   - include: handlers/handlers.yml
 ```
 
-Include 语句也可用来将一个 playbook 文件导入另一个 playbook 文件。这种方式允许你定义一个 顶层的 playbook，这个顶层 playbook 由其他 playbook 所组成。
+Include 语句也可用来将一个 playbook 文件导入另一个 playbook 文件。这种方式允许你定义一个顶层的 playbook，这个顶层 playbook 由其他 playbook 所组成。
 
 ```yml
 - name: this is a play at the top level of a file
@@ -799,6 +925,104 @@ Include 语句也可用来将一个 playbook 文件导入另一个 playbook 文�
 - include: dbservers.yml
 
 ```
+
+完整示例：
+
+顶层playbook，我们改下hello_world.yml
+
+```
+---
+#his is a play at the top level of a file hello_world.yml
+#play
+- name: say 'hello world'
+  hosts: localhost
+  tasks:
+    # task
+    - name: echo 'hello world'
+      # module
+      command: echo 'hello world'
+      register: result
+    # task
+    - name: print stdout
+      # module
+      debug:
+          msg: '{{result}}'
+
+- include: rootFoo.yml
+```
+
+子playbook使用前面的rootFoo.yml 
+
+运行结果如下,可以看到会完整的执行rootFoo.yml的play
+
+```bash
+$ ansible-playbook hello_world.yml 
+
+PLAY [say 'hello world'] *******************************************************
+
+TASK [setup] *******************************************************************
+ok: [localhost]
+
+TASK [echo 'hello world'] ******************************************************
+changed: [localhost]
+
+TASK [print stdout] ************************************************************
+ok: [localhost] => {
+    "msg": {
+        "changed": true, 
+        "cmd": [
+            "echo", 
+            "hello world"
+        ], 
+        "delta": "0:00:01.003040", 
+        "end": "2020-03-04 17:47:26.174646", 
+        "rc": 0, 
+        "start": "2020-03-04 17:47:25.171606", 
+        "stderr": "", 
+        "stdout": "hello world", 
+        "stdout_lines": [
+            "hello world"
+        ], 
+        "warnings": []
+    }
+}
+
+PLAY [say 'hello world'] *******************************************************
+
+TASK [setup] *******************************************************************
+ok: [localhost]
+
+TASK [include] *****************************************************************
+included: /home/learlee/WorkSpace/Ansible/tasks/foo.yml for localhost
+
+TASK [echo 'hello world'] ******************************************************
+changed: [localhost]
+
+TASK [print stdout] ************************************************************
+ok: [localhost] => {
+    "msg": {
+        "changed": true, 
+        "cmd": [
+            "echo", 
+            "hello world"
+        ], 
+        "delta": "0:00:01.002729", 
+        "end": "2020-03-04 17:47:27.932587", 
+        "rc": 0, 
+        "start": "2020-03-04 17:47:26.929858", 
+        "stderr": "", 
+        "stdout": "hello world", 
+        "stdout_lines": [
+            "hello world"
+        ], 
+        "warnings": []
+    }
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=7    changed=2    unreachable=0    failed=0   
+```
+
 #### Roles
 
 Roles 的概念来自于这样的想法：通过 include 包含文件并将它们组合在一起，组织成一个简洁、可重用的抽象对象。这种方式可使你将注意力更多地放在大局上，只有在需要时才去深入了解细节。
@@ -849,7 +1073,7 @@ roles/
 -    如果 roles/x/handlers/main.yml 存在, 其中列出的 handlers 将被添加到 play 中
 -    如果 roles/x/vars/main.yml 存在, 其中列出的 variables 将被添加到 play 中
 -    如果 roles/x/meta/main.yml 存在, 其中列出的 “角色依赖” 将被添加到 roles 列表中 (1.3 and later)
--   所有 copy tasks 可以引用 roles/x/files/ 中的文件，不需要指明文件的路径。
+-    所有 copy tasks 可以引用 roles/x/files/ 中的文件，不需要指明文件的路径。
 -    所有 script tasks 可以引用 roles/x/files/ 中的脚本，不需要指明文件的路径。
 -    所有 template tasks 可以引用 roles/x/templates/ 中的文件，不需要指明文件的路径。
 -    所有 include tasks 可以引用 roles/x/tasks/ 中的文件，不需要指明文件的路径。
@@ -866,6 +1090,7 @@ roles/
     - { role: foo_app_instance, dir: '/opt/a',  port: 5000 }
     - { role: foo_app_instance, dir: '/opt/b',  port: 5001 }
 ```
+
 可以为 roles 设置触发条件，像这样:
 
 ```yml
@@ -878,7 +1103,7 @@ roles/
 
 希望定义一些 tasks，让它们在 roles 之前以及之后执行，你可以这样做:
 
-```
+```yml
 ---
 
 - hosts: webservers
@@ -923,7 +1148,7 @@ dependencies:
 
 我们可以通过 Galaxy (银河) 和 ansible-galaxy (Terminal) 来使用 Roles。
 - Galaxy 的全名为 Ansible Galaxy，它是官方维护的 Roles 市集 (marketplace) 网站。我们可以在网站上取得社群成员所维护的 Roles，其 source code 存放于 GitHub。
-- ansible-galaxy 是管理 Roles 的指令，我们可以在 Terminal 里用它搜寻 (search)、安装 (install)、移除 (remove) Roles 等。换句话说它是 Ansible 世界的 pip。
+- ansible-galaxy 是管理 Roles 的指令，我们可以在 Terminal 里用它搜寻 (search)、安装 (install)、移除 (remove) Roles 等。换句话说它是 Ansible 世界的 pip。Roles是Ansible世界的Package。
 
 **怎么搜寻 Roles？**
 
