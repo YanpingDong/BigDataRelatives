@@ -862,6 +862,8 @@ Please use the following password to proceed to installation:
 
 a3db14756b674fdaa8271abe608ecf1a
 
+如果在启动的时候添加了-v /your/host/path:/var/jenkins_home,那么可以在/your/host/path/secrets/initialAdminPassword文件中，在容器中对应位置就是/var/jenkins_home/secrets/initialAdminPassword。如果没有添加卷的话就需要通过exec -it containerId /bin/bash附加到容器中查看
+
 ```
 ## redis安装
 
