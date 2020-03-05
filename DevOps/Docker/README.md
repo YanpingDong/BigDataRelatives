@@ -755,6 +755,27 @@ bridge_ports eth0　＃指定物理机网卡，重启后用ifconfig查看，eth0
 
 *Ctrl p q退出交并使运行起来的容器运行在后台（一直压着Ctrl 顺序输入p q）。或者在启动的时候用-d参数*
 
+```
+docker安装完成后，可以理解成添加了docker的shell工具命令，和其他的Shell utilities（比如：cp，ls,rm等）没啥区别，所以shell脚本里是可以使用的，也可以和其它shell命令合起来使用。
+
+因为看成docker shell工具命令，可以用$()、``等来帮我们处理很多工作。比如：
+
+条件删除(-f后使用tab键可以提示过滤关键字)
+# docker rm $(docker ps -f "filter_condtion" -q)
+
+# 停止所有容器
+$ docker stop $(docker ps -a -q)
+
+# 删除
+$ docker rm $(docker ps -a -q)
+
+# 停止指定所有容器建议使用docker 的 -f
+$ docker stop $(docker ps | grep rock | awk '{print $1}')
+
+# 删除指定所有容器
+$ docker rm $(docker ps -a| grep rock | awk '{print $1}')
+```
+
 ## 设置Docker资源限制
 
 以下都是docker ran or create所支持的。
