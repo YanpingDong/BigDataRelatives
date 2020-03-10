@@ -605,7 +605,7 @@ Bridge是容器启动的默认网络模式。
 docker容器之间与网络相关的命令
 
 ```
-如果需要使用宿主机器的iptables管理docker容器的互联，需要在/etc/default/docker配置文件添加 DOCKER_OPTS="=-icc=false --iptables = true"，然后容器网络就可以别宿主机器iptables管理
+如果需要使用宿主机器的iptables管理docker容器的互联，需要在/etc/default/docker配置文件添加 DOCKER_OPTS="=-icc=false --iptables = true"，然后容器网络就可以用宿主机器iptables管理
 
 NOTE: -icc是关闭默认链接，然后设置--iptables=true。启动容器时候，让互联容器用--link启动就可以控制容器之间的链接。
 
@@ -614,8 +614,9 @@ $ docker run --link=[container_name]:[alias] [image] [command]
 
 E.G.:
 $ docker run -it --name test --link=testweb:webtest your_image /bin/bash
+#在新启动容器中执行下面命令
 $ ping webtest
-是可以ping到testweb的容器，并且在设置了--iptables=true后会自动设置宿主机的ipteables使两个容器能互联。而且在docker停止后再次启动两容器的ip即使变化了，test也是能通过webtest连接上testweb容器。这是因为启动test容器的时候会动态设置test容器中的env环境变量和hosts文件使webtest名字指向testweb容器的ip地址和端口
+是可以ping到testweb的容器。但在docker停止后再次启动两容器的ip即使变化了，test也是能通过webtest连接上testweb容器。这是因为启动test容器的时候会动态设置test容器中的env环境变量和hosts文件使webtest名字指向testweb容器的ip地址和端口
 
 $ env 示例:
 WEBTEST_PORT_80_TCP_ADDR=xxx.xxx.xxx.xxx
@@ -626,6 +627,8 @@ WEBTEST_PORT_80_TCP_PROTO=tcp
 
 $ cat /etc/hosts
 xxx.xxx.xxx.xxx    webtest
+
+默认同宿主机的不同容器是可以直接互联的，但重新启动后也会发生IP变化问题，所以也是可以使用--link来解决
 ```
 
 通过上面描述了解到，docker启动增加了`--iptables = true`参数后，容器之间的互通实际是通过容器的iptables来控制的。那先看下iptables的4表5链，其运行流程如下图：
@@ -727,7 +730,11 @@ root@7ab643ebb877:/# curl 172.17.0.2
 
 ### 跨宿主机链接
 
-实际上跨主机连接仍然靠的是iptables，如果宿主机没有禁止外网连接，那么只需要知道容器绑定的宿主机端口和宿主机容器IP，然后在另一台宿主机中就可以通过【`需要连接的宿主机容器IP：需要连接的容器绑定的宿主机端口`】就可以访问到。但如过想直接通过容器IP地址访问容器服务，则需要下面方式。
+实际上跨主机连接仍然靠的是iptables，如果宿主机没有禁止外网连接，那么只需要知道容器绑定的宿主机端口和宿主机容器IP，然后在另一台宿主机中就可以通过【`需要连接的宿主机IP：需要连接的容器绑定的宿主机端口`】就可以访问到。但如过想直接通过容器IP地址访问容器服务，则需要下面方式。
+
+下图可以看到容器在没有使用下列方式的时候是如何通过`宿主机IP：容器绑定宿主机端口`链接。实际可以简单理解成宿主机指定端口转发到容器端口。这也就是为什么每个宿主机的端口只能绑定一个容器端口的原因。
+
+![](./pic/Link2Container.png)
 
 #### 使用网桥配置多主机
 
