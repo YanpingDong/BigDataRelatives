@@ -834,9 +834,9 @@ a3db14756b674fdaa8271abe608ecf1a
 ```
 ## redis安装
 
-1. pull `docer pull redis:3.2`
+1. 下载 `docer pull redis:3.2`
 
-2. run `docker run -p 6379:6379 --name redis -v /home/tra/MyApp/redis/data:/data -v /home/tra/MyApp/redis/config/redis.conf:/usr/local/etc/redis/redis.conf -d redis:3.2 redis-server /usr/local/etc/redis/redis.conf --appendonly yes`
+2. 运行`docker run -p 6379:6379 --name redis -v /home/tra/MyApp/redis/data:/data -v /home/tra/MyApp/redis/config/redis.conf:/usr/local/etc/redis/redis.conf -d redis:3.2 redis-server /usr/local/etc/redis/redis.conf --appendonly yes`
 
 如果想给redis更改配置文件只需要在`/home/tra/MyApp/redis/config/redis.conf`目录里创建redis.conf的配置文件即可。这里会让人迷惑，用过redis的应该知道redis.conf是个目录。
 
