@@ -1186,3 +1186,10 @@ docker-compose version 1.25.4, build 8d51620a
 
 ``` 
 
+删除
+
+```bash
+$ sudo rm /usr/local/bin/docker-compose
+```
+
+通过安装就知道是把文件下载到Linux的默认path下，只要删除文件就可以。
