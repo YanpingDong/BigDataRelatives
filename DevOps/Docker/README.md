@@ -141,7 +141,7 @@ Dockerfile is nothing but the source code for building Docker images
     - VOLUME \<mountpoint\>   or   VOLUME ["\<mountpoint\>"]
     - 挂载到宿主机的位置并没有指定，所以docker会自动绑定主机上的一个目录。可以通过`docker inspec NAME|ID`来查看
     - 通过命令行可以指定宿主机目录：`docker run --name test -it -v /home/xqh/myimage:/data imageName`;这样在容器中对/data目录下的操作，还是在主机上对/home/xqh/myimage的操作，都是完全实时同步的（指的是启动后，容器中的修改会反应到宿主机绑定目录，反之亦然;启动时完全以宿主机文件为主）。
-  - 如果宿主机挂载点目录路径下此前有文件存在，docker run命令启动会在卷挂载完成后：1.覆盖容器中挂载点同名文件，如果是目录则覆盖目录中同名文件。2.将此容器中宿主机没有的文件拷贝到宿主机中。启动完成后，双向同步数据的修改。
+  - 如果宿主机挂载点目录路径下此前有文件存在，docker run命令启动会在卷挂载完成后：1.清空容器文件。2.将此容器中指定的路径中的文件拷贝到宿主机中。启动完成后，双向同步数据的修改。
   - 容器运行时应该尽量保持容器存储层不发生写操作，对于数据库类需要保存动态数据的应用，其数据库文件应该保存于卷(volume)中。为了防止运行时用户忘记将动态文件所保存目录挂载为卷，在 Dockerfile 中，我们可以事先指定某些目录挂载为匿名卷，这样在运行时如果用户不指定挂载，其应用也可以正常运行，不会向容器存储层写入大量数据。
 
 ```dockerfile
@@ -829,6 +829,8 @@ Usage:200%代表使用2个cpu
 docker pull mysql:5.6
 
 docker run -p 3306:3306 --name mysql -v /home/tra/MyApp/mysql/conf:/etc/mysql/conf.d -v /home/tra/MyApp/mysql/logs:/logs -v /home/tra/MyApp/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.6
+
+/home/tra/MyApp/mysql可以使用$(pwd)代替，如果你就在/home/tra/MyApp/mysql目录下执行docker run的话
 ```
 
 从`docker run`的参数可以看出，启动镜像成为容器，核心是要暴露port和volume。port和宿主机绑定后，只要能通过IP访问到宿主机，那么再加上绑定port就可以理解成，宿主机会转发该port的网络请求信息给容器。（通过mysql workbench验证MySQL安装是很好的实例证明）
@@ -908,6 +910,50 @@ redis:3.2 redis-server /usr/local/etc/redis/redis.conf --appendonly yes
 ```
 
 3. 验证`docker exec -it contianerId redis-cli`登录进容器的redis命令行终端，进入后通过set命令存入值，然后shutdown。最后你可以在宿主机器的`/home/tra/MyApp/redis/data`目录下看到appendonly.aof文件
+
+## 安装Tomecat
+
+```bash
+$ docker pull tomcat:9.0
+$ docker run -it -p 8888:8080 -v $(pwd)/tomcat/:/usr/local/tomcat/webapps/ tomcat:9.0
+#You can then go to http://localhost:8888 or http://host-ip:8888 in a browser
+
+The default Tomcat environment in the image is:
+CATALINA_BASE:   /usr/local/tomcat
+CATALINA_HOME:   /usr/local/tomcat
+CATALINA_TMPDIR: /usr/local/tomcat/temp
+JRE_HOME:        /usr
+CLASSPATH:       /usr/local/tomcat/bin/bootstrap.jar:/usr/local/tomcat/bin/tomcat-juli.jar
+```
+
+测试
+
+```
+在$(pwd)/tomcat目录下
+step 1: 添加hello目录
+step 2: 进入hello创建index.html
+step 3: <h1>hello world</h1>写入index.html
+step 4： http://localhost:8888/hello/index.html
+```
+
+```
+如果在绑定卷的时候指定成/usr/local/tomcat/因为宿主机下没有数据会把该目录数据清空。导致如下错误：docker: Error response from daemon: OCI runtime create failed: container_linux.go:345: starting container process caused "exec: \"catalina.sh\": executable file not found in $PATH": unknown.
+
+如下测试，因为我的目录下有hello目录所以正给目录成了我宿主机内容。导致tomcat相关文件全部丢失
+$ docker run -it --rm -p 8888:8080 -v $(pwd):/usr/local/tomcat/ tomcat:9.0 /bin/bash
+root@6414df6da4b4:/usr/local/tomcat# ls
+hello
+root@6414df6da4b4:/usr/local/tomcat# ls -la hello
+total 12
+drwxrwxr-x 2 1000 1000 4096 Mar 10 09:46 .
+drwxrwxrwx 3 1000 1000 4096 Mar 10 09:43 ..
+-rw-rw-r-- 1 1000 1000   21 Mar 10 09:46 index.html
+root@6414df6da4b4:/usr/local/tomcat# cd hello/
+root@6414df6da4b4:/usr/local/tomcat/hello# cat index.html 
+<h1>hello world</h1>
+```
+
+
 
 ## 创建自己的Nginx镜像
 
