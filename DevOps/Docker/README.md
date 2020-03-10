@@ -1173,3 +1173,16 @@ docker compose就是一个编排多容器分布式部署的工具，通过命令
 1. 使用dockerfile创建容器
 2. 用docker-compose.yml定义服务组成与关系
 3. docker-compose up依据docker-compose.yml定义启动相关容器
+
+安装
+
+```bash
+$ sudo curl -L "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+$ sudo chmod +x /usr/local/bin/docker-compose
+
+$ docker-compose -v
+docker-compose version 1.25.4, build 8d51620a
+
+``` 
+
