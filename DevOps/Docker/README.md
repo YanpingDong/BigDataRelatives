@@ -1163,3 +1163,13 @@ Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运�
 我们应该注意到运行docker的hello-world后用`docker ps -a`查看是停止状态，原因很简单，容器里没有持续运行的任务。如果有持续运行的任务就会是UP。
 
 https://blog.csdn.net/babys/article/details/71170254
+
+# docker compose
+
+有了dockerfile，运维的时候就可以动态的创建镜像、部署镜像、启动停止镜像。当然也可以通过传递镜像来避免创建。但目前大部分服务都是微服务架构，完整的服务需要多个服务共同协同。有的时候启动顺序还有需要。那么如果管理多个微服务体系会变得困难。也就是安一定的业务规则批量管理容器成为了运维的需求。而docker compse就是解决这个需求的工具。
+
+docker compose就是一个编排多容器分布式部署的工具，通过命令管理容器的构建、启动、停止。
+
+1. 使用dockerfile创建容器
+2. 用docker-compose.yml定义服务组成与关系
+3. docker-compose up依据docker-compose.yml定义启动相关容器
