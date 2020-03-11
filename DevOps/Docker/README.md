@@ -346,6 +346,7 @@ Docker image instpect imageName：tag输出如下（注：没有ENTRYPOINT的时
 - ARG
   - 定义build-time时使用的变量， builder过程中用--build-arg \<varname\> = \<value\>来使用;而ENV是在不仅在build-time时有效，在running-time时也有效
   - 用${varname}来在Dockerfile中引用
+  - 如果有ENV那么ENV的同名参数会覆盖ARG的参数
 
 - ONBUILD
   - Dockerfile中定义一个触发器,在别人用该镜像做基础镜像构建的时候运行
