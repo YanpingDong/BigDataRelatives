@@ -1166,7 +1166,7 @@ https://blog.csdn.net/babys/article/details/71170254
 
 # docker compose
 
-有了dockerfile，运维的时候就可以动态的创建镜像、部署镜像、启动停止镜像。当然也可以通过传递镜像来避免创建。但目前大部分服务都是微服务架构，完整的服务需要多个服务共同协同。有的时候启动顺序还有需要。那么如果管理多个微服务体系会变得困难。也就是安一定的业务规则批量管理容器成为了运维的需求。而docker compse就是解决这个需求的工具。
+有了dockerfile，运维的时候就可以动态的创建镜像、部署镜像、启动停止镜像。当然也可以通过传递镜像来避免创建。但目前大部分服务都是微服务架构，完整的服务需要多个服务共同协同。有的时候启动顺序还有需要。那么如果管理多个微服务体系会变得困难。也就是安一定的业务规则批量管理容器成为了运维的需求。而docker compse就是解决这个需求的工具。另外就是集群管理了。
 
 docker compose就是一个编排多容器分布式部署的工具，通过命令管理容器的构建、启动、停止。
 
@@ -1193,3 +1193,7 @@ $ sudo rm /usr/local/bin/docker-compose
 ```
 
 通过安装就知道是把文件下载到Linux的默认path下，只要删除文件就可以。
+
+[Get Started with Docker compose](https://docs.docker.com/compose/gettingstarted/)里有详细的入门教程。
+
+[runoob的教程](https://www.runoob.com/docker/docker-compose.html)，这个教程多了些基础的配置指令。比如depends_on等。
