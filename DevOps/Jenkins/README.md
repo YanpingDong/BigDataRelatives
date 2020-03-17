@@ -119,3 +119,29 @@ CI系统的基本结构如下图：
 
 Step1： 建立本机与远端机器的免密登录。
 Step2： 添加maven集成插件
+
+## Jenkins更新
+
+有的时候Jenkins会提示系统有新版本，这个时候想升级docker里的jenkins也很容易。
+
+1. 下载新版本的Jenkis.war
+2. 停止jenkins容器
+3. 使用`docker cp 要拷贝的文件路径 容器名:要拷贝到容器里面对应的路径`命令把新的jenkins.war拷贝到`/usr/share/jenkins`中覆盖老版本
+4. 重启jenkins容器
+
+```
+如何知道jenkins的存放位置？
+
+Step1: docker inspect 查看启动信息
+"Entrypoint": [
+                "/sbin/tini",
+                "--",
+                "/usr/local/bin/jenkins.sh"
+            ]
+
+Step2: 查看jenkins.sh脚本
+$ more /usr/local/bin/jenkins.sh
+#! /bin/bash -e
+
+: "${JENKINS_WAR:="/usr/share/jenkins/jenkins.war"}"
+```
