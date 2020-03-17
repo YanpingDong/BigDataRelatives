@@ -145,3 +145,239 @@ $ more /usr/local/bin/jenkins.sh
 
 : "${JENKINS_WAR:="/usr/share/jenkins/jenkins.war"}"
 ```
+
+## 集成启动程序启动脚本
+
+有的时候我们会在jenkins所在的服务器下载编译测试完代码，并不把最后打包好的程序上传在启动，而是在需要启动的服务器上执行脚本，通过脚本把代码拉到该服务器并编译打包执行。
+
+看上去需求有些奇怪，但如果你手上有台机器在境外做dev环境，那么直接push本地包的做法就很难，网络会老断，而且时间长还不一定能成功。
+
+那么我们在编写启动脚本的时候，会在脚本里添加拉取代码的git命令，如下脚本。
+
+```sh
+#!/bin/sh
+
+##############################################path config####################################################
+sourcePath=`pwd`
+targetPath=$sourcePath/target
+mavenCommandPath=$sourcePath
+#############################################################################################################
+
+order=$1
+branch=${2:-"master"}
+
+#set -exu
+
+# depend on package function,so  package function must run before to create target dir
+getServiceJarName(){
+    cd $targetPath
+    serviceJarName=`ls -la | grep -i "jar" | grep -v "original" | awk '{print $9}'`
+    echo $serviceJarName #return,use `` or $() to recieve
+}
+
+_getProcId(){
+    local serviceJar=$(getServiceJarName)
+	local proc_id=0
+	proc_id=`jps | grep $serviceJar | grep -v "grep" | awk '{print $1}'`
+    echo $proc_id #return,use `` or $() to recieve
+}
+
+checkServiceStatus(){
+    local proc_id=$(_getProcId)
+	if [ ! $proc_id ]; then
+        echo -e "\033[0m Error: \033[0m ""start failed!!!"
+        exit 0
+    else
+        echo "------------------------------------------------------------------------"
+        echo "Service is running !"
+        echo "------------------------------------------------------------------------"
+    fi
+}
+
+checkServiceName(){
+	serviceJarPath=`find $sourcePath -name $serviceJarName`"/target/"$serviceJarName
+	if [ ! -f "$serviceJarPath" ]; then
+		echo -e "\033[0m Error: \033[0m ""the specified service's jar not exists.
+		please check whether the serviceName is misspell or the package operation failed"
+		exit 0
+    fi
+}
+
+chbranch(){
+	cd $sourcePath
+    git reset --hard HEAD
+    git checkout ${branch}
+	echo "------------------------------------------------------------------------"
+	echo "Change Branch Success!"
+	echo "------------------------------------------------------------------------"
+}
+
+pull(){
+	cd $sourcePath
+	git reset --hard HEAD
+	git pull
+	echo "------------------------------------------------------------------------"
+	echo "Pull Success!"
+	echo "------------------------------------------------------------------------"
+}
+
+package(){
+	cd $mavenCommandPath
+    mvn clean install -DskipTests
+	echo "------------------------------------------------------------------------"
+    echo "Package Success!"
+    echo "------------------------------------------------------------------------"
+}
+
+stopService(){
+	local proc_id=`_getProcId`
+    if test -z "$proc_id"
+        then
+        echo "------------------------------------------------------------------------"
+        echo -e "\033[33m Warn: \033[0m ""service not running!"
+        echo "------------------------------------------------------------------------"
+    else
+        kill -9 $proc_id       #if the PID exists, kill it
+        echo "------------------------------------------------------------------------"
+        echo "Service Killed Success!"
+        echo "------------------------------------------------------------------------"
+    fi
+	sleep 1
+}
+
+startService(){
+    local serviceJar=$(getServiceJarName)
+    local proc_id=`_getProcId`
+    if test -z "$proc_id"
+    then
+        :
+    else
+        echo "------------------------------------------------------------------------"
+        echo -e "\033[31m Error: \033[0m "$serviceJarName" is still running,please stop it first!"
+        echo "------------------------------------------------------------------------"
+        exit 1
+    fi
+
+	if [ ! -f "$targetPath/$serviceJar" ]; then
+		echo "------------------------------------------------------------------------"
+        echo -e "\033[0m Error: \033[0m ""the specified service's jar not exists.
+        please check whether the serviceName is misspell or the package operation failed!"
+		echo "------------------------------------------------------------------------"
+        exit 1
+    fi
+        echo "java -jar $targetPath/$serviceJar --spring.profiles.active=local as deamon"
+	    nohup java -jar $targetPath/$serviceJar --spring.profiles.active=local >>/dev/null 2>&1 &
+
+  	sleep 10
+ 	echo "------------------------------------------------------------------------"
+	echo "Start Success!"
+	echo "------------------------------------------------------------------------"
+
+}
+
+serviceStatus(){
+    echo "------------------------------------------------------------------------"
+    proc_id=`_getProcId`
+    local serviceJar=$(getServiceJarName)
+    if [ -z $proc_id ];then
+        echo "------------------------------------------------------------------------"
+        echo -e "\033[0m Error: \033[0m "$serviceJar" is not running ! "
+		echo "------------------------------------------------------------------------"
+        exit 1
+    else
+        echo $serviceJar" is running!"
+    fi
+    echo "------------------------------------------------------------------------"
+}
+
+restart(){
+	stopService
+	startService
+	serviceStatus
+}
+
+startWithoutPull(){
+    package
+    stopService
+    startService
+    serviceStatus
+}
+
+deploy(){
+    chbranch
+    pull
+    package
+    stopService
+    startService
+    serviceStatus
+}
+
+start(){
+	if [ ! -d "$sourcePath" ]; then
+        echo -e "\033[0m Error: \033[0m ""sourcePath not exists! please set it in "$0" first!"
+        exit 1
+    fi
+
+	case "$order" in
+		pull)
+			pull
+			;;
+		stop)
+			stopService
+			;;
+		start)
+			startService
+			;;
+		restart)
+			restart
+			;;
+		status)
+			serviceStatus
+			;;
+		jarname)
+			getServiceJarName
+			;;
+		package)
+			package
+			;;
+		check)
+			checkServiceStatus
+			;;
+		startWithoutPull)
+			startWithoutPull
+			;;
+		deploy)
+			deploy
+		  ;;
+		*)
+			printUsage
+
+	esac
+}
+
+printUsage(){
+	echo "------------------------------------------------------------------------"
+	printf 'Usage: %s [deploy|pull|package|replace|start|stop|status] [branch]\n' "$0"
+	services=`ps -ef|grep java|grep -v "grep"|awk '{print $10}'`
+    echo "currently running services:"
+	for service in $services
+    do
+        service=${service##*/}
+        echo ${service%.*}
+    done
+	echo "------------------------------------------------------------------------"
+    exit 1
+}
+
+start
+
+```
+
+但我们需要注意的是，拉取代码的前置操作要很谨慎，如果出错，那么jenkins服务器会永远也不能成功更新目标机器上的代码，最终导致没办法部署。如下代码的sourcePath如果写错，那么jenkins部署页面会直接报错，你不上那台机器去修改你的脚本想通过更新gerrit库/github库里的对应脚本是不可能的。因为根本走不到更新代码的步骤就结束！！！
+
+```sh
+if [ ! -d "$sourcePath" ]; then
+        echo -e "\033[0m Error: \033[0m ""sourcePath not exists! please set it in "$0" first!"
+        exit 1
+    fi
+```
