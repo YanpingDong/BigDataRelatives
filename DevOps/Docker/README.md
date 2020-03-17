@@ -1002,16 +1002,19 @@ EOF
 
 exec "$@"
 ```
+
 ## 安装gitlab
 
 gitlab docker页面：https://hub.docker.com/r/gitlab/gitlab-ce
 
 gitlab docker说明文档：https://docs.gitlab.com/omnibus/docker/README.html
 
-运行命令如下，但hostname、volume和publish参数需要依据自己的实际情况调整
+拉取运行命令如下，但hostname、volume和publish参数需要依据自己的实际情况调整
 
-```
-sudo docker run --detach \
+```bash
+$ docker pull gitlab/gitlab-ce
+
+$ sudo docker run --detach \
   --hostname gitlab.example.com \
   --publish 443:443 --publish 80:80 --publish 22:22 \
   --name gitlab \
@@ -1021,6 +1024,7 @@ sudo docker run --detach \
   --volume /srv/gitlab/data:/var/opt/gitlab \
   gitlab/gitlab-ce:latest
 ```
+
 所有的GitLab数据会保存在/srv/gitlab/的子目录下，https是443，http是80，ssh是22。
 
 如果是本机启动，可以直接使用localhost:port来访问。而这里的port是和容器80相对应的。
