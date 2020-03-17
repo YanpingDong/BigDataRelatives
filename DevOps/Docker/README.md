@@ -443,6 +443,26 @@ NOTE: Linux的默认值设计方法
 
 ```
 
+# 总结
+
+Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运行image成容器后，可以理解成container是个微型Linux（有基本功能）+通过>导出容器命令运行结果的机器（可以看MySQL数据导出）。所以可以登录该容器，并在该容器运行Linux基础命令，也能把数据导出到宿主机中。登录容器后操作容器中的软件（比如MySQL,Redis或自己写的Springboot程序等）和在一台linux下一模一样。
+
+通过port来成为宿主机器的影子服务器，所有的请求宿主机该port的请求都转给容器。通过volume实现容器和宿主机器数据的同步。
+
+```
+所以在暴露port和volume的时候考虑如下问题：
+1. 程序启动后需要用到哪些端口，比如tomcat启动需要8080,SpringBoot程序启动后也需要8080
+2. 软件哪些数据需要持久化和查看、状态需要外部更改
+ 2.1 容器中的软件程序哪些路径下的数据要持久化，那么就volume到宿主机器中
+ 2.2 容器中的软件哪些配置需要更改，那么就volume到宿主机器中
+ 2.3 容器中的哪些信息记录（比如：log）需要外部方便查看，那么就volume到宿主机器中
+```
+
+我们应该注意到运行docker的hello-world后用`docker ps -a`查看是停止状态，原因很简单，容器里没有持续运行的任务。如果有持续运行的任务就会是UP。
+
+https://blog.csdn.net/babys/article/details/71170254
+
+
 ## 基于容器制作
 
 实际是把对一个容器的变更部分变成镜像，也可以理解成把正在运行的容器制作成镜像。
@@ -758,6 +778,24 @@ CFS调度算法负责在linux上维护为任务提供处理器时间方面的平
 Usage:200%代表使用2个cpu
 ```
 
+## Docker安装如何知道暴露Port和Volum
+
+当安装的时候可以使用`docker inspect`来查看镜像里的ExposePorts和Volumes相关值，当然，这个不能完全保证，因为可能制作镜像的时候并没有做Exopse。所以没有的时候就要看相关Docker文档了。一般情况下`hub.docker.com`下查询出来的都可以看到启动说明。
+
+```json
+ "ExposedPorts": {
+                "22/tcp": {},
+                "443/tcp": {},
+                "80/tcp": {}
+            }
+
+"Volumes": {
+                "/etc/gitlab": {},
+                "/var/log/gitlab": {},
+                "/var/opt/gitlab": {}
+            }          
+```
+
 ## 安装MySQL
 
 一般安装过程如下
@@ -809,6 +847,7 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 通过docker执行mysqldump即可
 
 `docker exec containerId sh -c 'exec mysqldump --all-databases -u[name] -p[password]' > /宿主机器路径/文件名.sql` 
+
 
 ## jenkins安装
 
@@ -892,7 +931,6 @@ root@6414df6da4b4:/usr/local/tomcat# cd hello/
 root@6414df6da4b4:/usr/local/tomcat/hello# cat index.html 
 <h1>hello world</h1>
 ```
-
 
 
 ## 创建自己的Nginx镜像
@@ -1146,25 +1184,6 @@ root         1     0  0 02:39 pts/0    00:00:00 /bin/bash
 root        16     0  6 04:03 pts/1    00:00:00 /bin/bash
 root        25    16  0 04:03 pts/1    00:00:00 ps -ef
 ```
-
-# 总结
-
-Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运行image成容器后，可以理解成container是个微型Linux（有基本功能）+通过>导出容器命令运行结果的机器（可以看MySQL数据导出）。所以可以登录该容器，并在该容器运行Linux基础命令，也能把数据导出到宿主机中。登录容器后操作容器中的软件（比如MySQL,Redis或自己写的Springboot程序等）和在一台linux下一模一样。
-
-通过port来成为宿主机器的影子服务器，所有的请求宿主机该port的请求都转给容器。通过volume实现容器和宿主机器数据的同步。
-
-```
-所以在暴露port和volume的时候考虑如下问题：
-1. 程序启动后需要用到哪些端口，比如tomcat启动需要8080,SpringBoot程序启动后也需要8080
-2. 软件哪些数据需要持久化和查看、状态需要外部更改
- 2.1 容器中的软件程序哪些路径下的数据要持久化，那么就volume到宿主机器中
- 2.2 容器中的软件哪些配置需要更改，那么就volume到宿主机器中
- 2.3 容器中的哪些信息记录（比如：log）需要外部方便查看，那么就volume到宿主机器中
-```
-
-我们应该注意到运行docker的hello-world后用`docker ps -a`查看是停止状态，原因很简单，容器里没有持续运行的任务。如果有持续运行的任务就会是UP。
-
-https://blog.csdn.net/babys/article/details/71170254
 
 # docker compose
 
