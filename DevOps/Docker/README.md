@@ -1002,6 +1002,39 @@ EOF
 
 exec "$@"
 ```
+## 安装gitlab
+
+gitlab docker页面：https://hub.docker.com/r/gitlab/gitlab-ce
+
+gitlab docker说明文档：https://docs.gitlab.com/omnibus/docker/README.html
+
+运行命令如下，但hostname、volume和publish参数需要依据自己的实际情况调整
+
+```
+sudo docker run --detach \
+  --hostname gitlab.example.com \
+  --publish 443:443 --publish 80:80 --publish 22:22 \
+  --name gitlab \
+  --restart always \
+  --volume /srv/gitlab/config:/etc/gitlab \
+  --volume /srv/gitlab/logs:/var/log/gitlab \
+  --volume /srv/gitlab/data:/var/opt/gitlab \
+  gitlab/gitlab-ce:latest
+```
+所有的GitLab数据会保存在/srv/gitlab/的子目录下，https是443，http是80，ssh是22。
+
+如果是本机启动，可以直接使用localhost:port来访问。而这里的port是和容器80相对应的。
+
+需要稍等下，要不然访问会出502。但能看当gitlab的标志，说明服务器还在初始化。第一次正常访问后会跳转的如下页面给root用户设置密码。
+
+![](pic/gitlabSetPassword.png)
+
+设置完成后就可以用root用户登录了。进入如下页面，开始正常操作。
+
+![](pic/gitlabLoginPage.png)
+
+### 数据存放位置
+
 # 容器生命周期
 
 Docker的主进程（PID1进程）是一个很特殊的存在，它的生命周期就是docker container的生命周期，它得对产生的子进程负责，在写Dockerfile的时候，务必明确PID1进程是什么。
@@ -1015,6 +1048,7 @@ Docker的主进程（PID1进程）是一个很特殊的存在，它的生命周�
 
 简单符要求的实例：
 很简单的while循环脚本
+
 ```bash
 $docker run -d --name ct ubuntu:18.0.4 /bin/sh -c "while true; do echo working; sleep 1; done"
 
