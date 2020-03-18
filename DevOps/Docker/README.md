@@ -1045,10 +1045,12 @@ $ sudo docker run -ti \
   -p 8080:8080 -p 29418:29418 \
   --name gerrit \
   --volume /home/learlee/DockerRun/gerrit_home/db:/var/gerrit/db \
+  --volume /home/learlee/DockerRun/gerrit_home/git:/var/gerrit/git \
   --volume /home/learlee/DockerRun/gerrit_home/cache:/var/gerrit/cache \
   gerritcodereview/gerrit:latest
 
-这里只把数据相关暴露了出来。
+这里只把数据相关暴露了出来。但要确保宿主机目录权限，如果指定不存在的话自动创建的目录可能会出现权限问题。
+
 ```
 本地安装完成后可以使用localhost:8080访问。登录如下界面
 
@@ -1070,7 +1072,24 @@ volumes:
 docker inspect看Volumes和ExposedPorts或者dockerhub的网页描述也能拿到
 ```
 
-### 数据存放位置
+如果在生产环境下的话需要全部开放以便配置，可使用如下命令启动。要确保宿主机相关目录权限！！！使用以下方式启动的gerrit用户需要自己配置，没有登录界面。
+
+```
+sudo docker run -ti \
+  -p 8080:8080 -p 29418:29418 \
+  --name gerrit \
+  --volume /home/learlee/DockerRun/gerrit_home/etc:/var/gerrit/etc \
+  --volume /home/learlee/DockerRun/gerrit_home/git:/var/gerrit/git \
+  --volume /home/learlee/DockerRun/gerrit_home/db:/var/gerrit/db \
+  --volume /home/learlee/DockerRun/gerrit_home/index:/var/gerrit/index \
+  --volume /home/learlee/DockerRun/gerrit_home/cache:/var/gerrit/cache \
+  gerritcodereview/gerrit:latest
+```
+
+使用默认登录后界面如下。可以确区分出和只暴露存储目录的区别
+
+![](pic/gerritProdIndexHome.png)
+
 
 # 容器生命周期
 
@@ -1087,15 +1106,15 @@ Docker的主进程（PID1进程）是一个很特殊的存在，它的生命周�
 很简单的while循环脚本
 
 ```bash
-$docker run -d --name ct ubuntu:18.0.4 /bin/sh -c "while true; do echo working; sleep 1; done"
+$ docker run -d --name ct ubuntu:18.0.4 /bin/sh -c "while true; do echo working; sleep 1; done"
 
-$docker exec ct ps -ef
+$ docker exec ct ps -ef
 UID        PID  PPID  C STIME TTY          TIME CMD
 root         1     0  0 07:21 ?        00:00:00 /bin/sh -c while true; do echo working; sleep 1; done
 root       107     1  0 07:23 ?        00:00:00 sleep 1
 
 #查看前台logs输出
-$docker logs ct
+$ docker logs ct
 working
 working
 working
