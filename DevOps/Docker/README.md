@@ -932,7 +932,6 @@ root@6414df6da4b4:/usr/local/tomcat/hello# cat index.html
 <h1>hello world</h1>
 ```
 
-
 ## 创建自己的Nginx镜像
 
 先写好deockerfile。实际上dockerfile里面的命令都可以在FROM的环境中运行。可以理解成，你在环境中需要执行哪些操作，在环境中测试过后，封装到dockerfile里面就好。但不是全部命令都可以，典型的如ADD COPY命令。
@@ -1036,6 +1035,40 @@ $ sudo docker run --detach \
 设置完成后就可以用root用户登录了。进入如下页面，开始正常操作。
 
 ![](pic/gitlabLoginPage.png)
+
+
+# Gerrit安装
+
+```
+$ docker pull gerritcodereview/gerrit
+$ sudo docker run -ti \
+  -p 8080:8080 -p 29418:29418 \
+  --name gerrit \
+  --volume /home/learlee/DockerRun/gerrit_home/db:/var/gerrit/db \
+  --volume /home/learlee/DockerRun/gerrit_home/cache:/var/gerrit/cache \
+  gerritcodereview/gerrit:latest
+
+这里只把数据相关暴露了出来。
+```
+本地安装完成后可以使用localhost:8080访问。登录如下界面
+
+![](pic/gerritIndexHome.png)
+
+可对外暴露的Port和Volume
+```
+ports:
+  - "29418"
+  - "8080"
+
+volumes:
+  - /var/gerrit/etc
+  - /var/gerrit/git
+  - /var/gerrit/db
+  - /var/gerrit/index
+  - /var/gerrit/cache
+
+docker inspect看Volumes和ExposedPorts或者dockerhub的网页描述也能拿到
+```
 
 ### 数据存放位置
 
