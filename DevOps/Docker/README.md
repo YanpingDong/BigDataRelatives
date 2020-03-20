@@ -1091,6 +1091,95 @@ sudo docker run -ti \
 ![](pic/gerritProdIndexHome.png)
 
 
+# openldap与phpLDAPadmin安装
+
+openldap提供ldap服务，phpLDAPadmin提供一个界面客户端，所以phpLDAPadmin是依赖openldap的。所以先安装openldap服务，如下所示：
+
+```bash
+$ docker pull osixia/openldap
+
+# 给定了数据存储卷，配置文件并没有暴露（/etc/ldap/slapd.d是个文件）
+# OpenLDAP监听的端口：
+#      默认监听端口：389（明文数据传输）
+#      加密监听端口：636（密文数据传输）
+# 如果不设定LDAP_DOMAIN默认是example.org
+# 如果不设定密码，admin默认密码是admin
+$ docker run -d \
+--name=openldap \
+-p 389:389 \
+-p 636:636 \
+-e "LDAP_DOMAIN=dyp.org" \
+-e "LDAP_ADMIN_PASSWORD=123456" \
+-e "LDAP_CONFIG_PASSWORD=123456" \
+-v /home/learlee/DockerRun/ldap_home/data:/var/lib/ldap  \
+osixia/openldap
+
+# 测试安装是否成功
+$ docker exec openldap ldapsearch -x -H ldap://localhost -b dc=dyp,dc=org -D "cn=admin,dc=dyp,dc=org" -w 123456
+# extended LDIF
+#
+# LDAPv3
+# base <dc=dyp,dc=org> with scope subtree
+# filter: (objectclass=*)
+# requesting: ALL
+#
+
+# dyp.org
+dn: dc=dyp,dc=org
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: Example Inc.
+dc: dyp
+
+# admin, dyp.org
+dn: cn=admin,dc=dyp,dc=org
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: admin
+description: LDAP administrator
+userPassword:: e1NTSEF9OHdDbkhVc0Y0M2xKbzBXT1M0akxZazdHTUhsTjFsQjk=
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 3
+# numEntries: 2
+```
+
+接下来安装phpLDAPadmin，在同一个宿主机下
+
+```bash
+$ docker pull osixia/phpldapadmin
+$ docker run -p 6443:443 --name phpldapadmin-service --link openldap:ldap-host --env PHPLDAPADMIN_LDAP_HOSTS=ldap-host --detach osixia/phpldapadmin
+```
+通过 https://localhost:6443 访问phpLDAPadmin，但由于用的不是CA认证的证书，会显示如下页面：
+
+![](pic/PotentialSecurityRiskAhead.png)
+
+点击[Advanced]-->[Accept the risk and continue]就可以看到如下页面
+
+![](pic/phpLDAPadminIndex.png)
+
+点击登录输入用户密码，初始化参见ldap服务启动设置，如果没有设置默认的用户是`n=admin,dc=example,dc=org`密码是`admin`
+
+```
+用户：cn=admin,dc=dyp,dc=org
+密码：123456
+```
+也可以使用官方提供的脚本模板直接启动两个服务。可以很直接的表明他们之间的联系。看`--link`参数。
+```bash
+#!/bin/bash -e
+docker run --name ldap-service --hostname ldap-service --detach osixia/openldap:1.1.8
+docker run --name phpldapadmin-service --hostname phpldapadmin-service --link ldap-service:ldap-host --env PHPLDAPADMIN_LDAP_HOSTS=ldap-host --detach osixia/phpldapadmin:0.9.0
+
+PHPLDAP_IP=$(docker inspect -f "{{ .NetworkSettings.IPAddress }}" phpldapadmin-service)
+
+echo "Go to: https://$PHPLDAP_IP"
+echo "Login DN: cn=admin,dc=example,dc=org"
+echo "Password: admin"
+```
 # 容器生命周期
 
 Docker的主进程（PID1进程）是一个很特殊的存在，它的生命周期就是docker container的生命周期，它得对产生的子进程负责，在写Dockerfile的时候，务必明确PID1进程是什么。
@@ -1125,8 +1214,7 @@ working
 
 在docker中，对于CMD和 ENTRYPOINT，支持两种进程执行方式：exec和shell。
 以下实例只列举了CMD，ENTRYPOINT同理
-shell的格式是：
-`CMD "executable param1 param2"`
+shell的格式是：`CMD "executable param1 param2"`
 
 最终转换后的格式是：
 ```
@@ -1137,8 +1225,7 @@ shell的格式是：
        ]
 ```
 
-Exec的格式是:
-`CMD ["executable","param1","param2"]`
+Exec的格式是: `CMD ["executable","param1","param2"]`
 
 最终转换后的格式是：
 ```
