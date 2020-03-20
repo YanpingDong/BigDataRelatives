@@ -1181,30 +1181,6 @@ echo "Login DN: cn=admin,dc=example,dc=org"
 echo "Password: admin"
 ```
 
-当phpLDAPadmin启动后，可以通过import导入ldif格式文件，比如
-
-```ldif
-# sample.ldif
-dn: ou=groups,dc=example,dc=org
-objectclass: top
-objectclass: organizationalUnit
-ou: groups
-
-dn: ou=subgroups,ou=groups,dc=example,dc=org
-objectclass: top
-objectclass: organizationalUnit
-ou: subgroups
-
-dn: ou=people,dc=example,dc=org
-objectclass: top
-objectclass: organizationalUnit
-ou: people
-
-dn: ou=space cadets,dc=example,dc=org
-objectclass: top
-objectclass: organizationalUnit
-ou: space cadets
-```
 # 容器生命周期
 
 Docker的主进程（PID1进程）是一个很特殊的存在，它的生命周期就是docker container的生命周期，它得对产生的子进程负责，在写Dockerfile的时候，务必明确PID1进程是什么。
