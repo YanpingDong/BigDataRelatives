@@ -1397,3 +1397,36 @@ $ sudo rm /usr/local/bin/docker-compose
 [Get Started with Docker compose](https://docs.docker.com/compose/gettingstarted/)里有详细的入门教程。
 
 [runoob的教程](https://www.runoob.com/docker/docker-compose.html)，这个教程多了些基础的配置指令。比如depends_on等。
+
+
+## 一些参数的区别
+
+## docker run 中的-v和-mount区别
+
+最开始 -v 或者 --volume 选项是给单独容器使用， --mount 选项是给集群服务使用。但是从 Docker 17.06 开始，也可以在单独容器上使用 --mount。通常来讲 --mount 选项也更加具体(explicit)和”啰嗦”(verbose)，最大的区别是
+
+- v 选项将所有选项集中到一个值
+- -mount 选项将可选项分开
+
+如果需要指定 volume driver 选项，那么必须使用 --mount
+
+- -v 或 --volume: 包含三个 field，使用 : 来分割，所有值需要按照正确的顺序。第一个 field 是 volume 的名字，并且在宿主机上唯一，对于匿名 volume，第一个field通常被省略；第二个field是宿主机上将要被挂载到容器的path或者文件；第三个field可选，比如说 ro
+
+- --mount: 包含多个 key-value 对，使用逗号分割。--mount 选项更加复杂，但是各个值之间无需考虑顺序。
+   - type，可以为 bind, volume, tmpfs, 通常为 volume
+   - source 也可以写成 src，对于 named volumes，可以设置 volume 的名字，对于匿名volume，可以省略
+   - destination 可以写成 dst或者 target 该值会挂载到容器
+   - readonly 可选，如果使用，表示只读
+   - volume-opt 可选，可以使用多次
+
+```bash
+$ docker run -d \
+  --name=nginxtest \
+  --mount source=nginx-vol,destination=/usr/share/nginx/html \
+  nginx:latest
+
+$ docker run -d \
+  --name=nginxtest \
+  -v nginx-vol:/usr/share/nginx/html \
+  nginx:latest
+```
