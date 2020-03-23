@@ -1162,7 +1162,7 @@ $ docker run -p 6443:443 --name phpldapadmin-service --link openldap:ldap-host -
 
 ![](pic/phpLDAPadminIndex.png)
 
-点击登录输入用户密码，初始化参见ldap服务启动设置，如果没有设置默认的用户是`n=admin,dc=example,dc=org`密码是`admin`
+点击登录输入用户密码，初始化参见ldap服务启动设置，如果没有设置默认的用户是`dn=admin,dc=example,dc=org`密码是`admin`
 
 ```
 用户：cn=admin,dc=dyp,dc=org
@@ -1179,6 +1179,7 @@ PHPLDAP_IP=$(docker inspect -f "{{ .NetworkSettings.IPAddress }}" phpldapadmin-s
 echo "Go to: https://$PHPLDAP_IP"
 echo "Login DN: cn=admin,dc=example,dc=org"
 echo "Password: admin"
+echo "Test cmd: docker exec openldap ldapsearch -x -H ldap://localhost -b dc=example,dc=org -D "cn=admin,dc=example,dc=org" -w admin"
 ```
 
 # 容器生命周期

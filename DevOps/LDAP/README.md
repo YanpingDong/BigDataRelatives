@@ -36,11 +36,58 @@ telephoneNumber：13288888888
 ```
 *当phpLDAPadmin启动后，可以通过import导入ldif格式文件*
 
-很多objectClass都会提供额外的字段,比如上面的telephoneNumber字段就是person这个objectClass提供的。([objectClass列表参考](https://www.zytrax.com/books/ldap/ape/#objectclasses ))
+很多objectClass都会提供额外的字段,比如上面的telephoneNumber字段就是person这个objectClass提供的。([objectClass列表参考](https://www.zytrax.com/books/ldap/ape/#objectclasses ))上面示例的person可选参数如下。
 
 Name | 可选参数
 ---|---
 person | userPassword $ telephoneNumber $ seeAlso $ description 
 
+ldap的数据组织关系，一般都是由大到小的树形结构。比如互联网组织大概会是：根节点为国家，国家下为域名，域名下为组织/组织单元，再往下为用户。企业是：根节点为域名，域名下面为部门，部门下面为用户。
 
-https://www.lagou.com/lgeduarticle/58051.html
+定义一个用户或数据实际就是给分配objectClass，并给objectClass提供的字段赋值即可。比如我们现在定义一个有密码的用户，可以通过分配simpleSecureityObject，然后给userPassord赋值就可以
+
+```
+dn: userid=dyp,dc=example,dc=org
+objectclass: simpleSecurityObject
+userid: dyp
+userPassword:123456
+```
+
+登录的时候就可以使用`userid=dyp,dc=example,dc=org`做为用户名登录
+
+## 相关命令
+
+当然openldap实现提供了一堆命令来做数据操作。先列出来看看有哪些
+
+**ldap开头的**
+
+ldapadd      ldapdelete   ldapmodify   ldappasswd   ldapurl      
+ldapcompare  ldapexop     ldapmodrdn   ldapsearch   ldapwhoami   
+
+**slap开头的**
+
+slapacl     slapauth    slapd       slapindex   slapschema  
+slapadd     slapcat     slapdn      slappasswd  slaptest 
+
+
+## Java连接LDAP
+
+实际上Java直接就支持连接，只需要提供管理员的账户密码，知道ldap所在的机器ip和port即可。如果按照docker的默认安装管理员账号是`cn=admin,dc=example,dc=org`密码是`admin`,查询的遍历起点BASEDN是`dc=example,dc=org`
+
+以下是常用的类：
+
+```java
+import javax.naming.AuthenticationException;
+import javax.naming.Context;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
+import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
+import javax.naming.ldap.Control;
+import javax.naming.ldap.InitialLdapContext;
+import javax.naming.ldap.LdapContext;
+```
+
+简单的Ldap数据连接、写入、查询见示例[代码](source/firstldap)
