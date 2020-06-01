@@ -1408,8 +1408,8 @@ $ sudo rm /usr/local/bin/docker-compose
 
 最开始 -v 或者 --volume 选项是给单独容器使用， --mount 选项是给集群服务使用。但是从 Docker 17.06 开始，也可以在单独容器上使用 --mount。通常来讲 --mount 选项也更加具体(explicit)和”啰嗦”(verbose)，最大的区别是
 
-- v 选项将所有选项集中到一个值
-- -mount 选项将可选项分开
+- -v 选项将所有选项集中到一个值
+- --mount 选项将可选项分开
 
 如果需要指定 volume driver 选项，那么必须使用 --mount
 
