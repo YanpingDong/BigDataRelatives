@@ -1,4 +1,9 @@
+# 解决痛点
+
+**解决开发到部署两个阶段因为环境不一致导致的问题。说白了就是，开发能运行，但部署运维却跑步起来！！！通过Docker容器化后，开发、测试、生产环境一致性得到保证。可以简单理解成部署服务编程安装APP**
+
 # Docker
+
 
 Docker 是一个开源的应用容器引擎,容器运行载体，基于 Go 语言 并遵从Apache2.0协议开源。
 
@@ -6,7 +11,7 @@ Docker 可以让开发者打包他们的应用以及依赖包到一个轻量级�
 
 容器是完全使用沙箱机制，相互之间不会有任何接口（类似 iPhone 的 app）,更重要的是容器性能开销极低。
 
-从运维的角度来说，就是把开发整体环境（运行环境（nginx,tomcat等）、OS、配置、开发语言（包括版本）、代码、运行依赖包等，只要与程序运行相关的软环境）打包成为镜像，运维部署镜像即可。部署时候不考虑环境，减少因为环境原因造成的部署失败。也就是说打破了代码即应用，而变成镜像即应用。`一次封装，到处运行`！！
+从运维的角度来说，就是把开发整体环境{运行环境（nginx,tomcat等）、OS、配置(一般是启动默认配置，也可以在启动时候改变，比如通过启动参数或Volume加载外部文件方式)、开发语言（包括版本）、代码、运行依赖包等}，只要与程序运行相关的软环境打包成为镜像，运维部署镜像即可。部署时候不考虑环境，减少因为环境原因造成的部署失败。也就是说打破了代码即应用，而变成镜像即应用。`一次封装，到处运行`！！
 
 ```
 镜像可以理解成轻量级、可执行的独立软件包，用来打包软件运行环境和基于运行环境开发的软件。所以它包含运行软件所需的所有内容，包括代码、运行时、库、环境变量和配置文件。
@@ -55,7 +60,7 @@ namespace的6种名称空间功能完善内核版本如下图，所以如果想�
 ![pic/namespace.png](pic/namespace.png)
 
 
-## Doker安装
+## Docker安装
 
 这里只演示ubuntu下的安装
 
@@ -67,6 +72,16 @@ sudo usermod -aG docker ${USER}
 #Remember that you will have to log out and back in for this to take effect!
 #提示说需要log out就好，但我在ubuntu下发现需要reboot。docker组是安装docker引擎时候创建的
 sudo service docker start
+
+#以上流程是参考docs.docker.com官方Install using the convenience script安装过程
+```
+
+## Docker卸载
+
+```bash
+$ sudo apt-get purge docker-ce docker-ce-cli containerd.io
+#Images, containers, volumes, or customized configuration files on your host are not automatically removed. To delete all images, containers, and volumes:
+$ sudo rm -rf /var/lib/docker
 ```
 
 ## 镜像加速
@@ -270,7 +285,7 @@ CMD /bin/bash
   ENTRYPOINT ["/bin/entrypoint.sh"]
   ```
 
-  entrypoint.sh内容如下：
+  entrypoint.sh内容如下，通过启动参数动态配置启动参数：
   ```sh
   #!/bin.sh
   # 向my.conf写入数据，设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
