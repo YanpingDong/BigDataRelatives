@@ -538,10 +538,20 @@ docker history imageId查看构建过程中生成了多少镜像。
 1. None --- 容器不能访问外部网络，内部存在回路地址。
 2. Container --- 将容器的网络栈合并到一起，可与其他容器共享网络。
 3. Host --- 与主机共享网络。
-4. Bridge --- 默认网络模式，通过主机和容器的端口映射（iptable转发）来通信。桥接是在主机上，一般叫docker0。
+4. Bridge --- **默认网络模式**，通过主机和容器的端口映射（iptable转发）来通信。桥接是在主机上，一般叫docker0。
 5. 自定义网络 --- 主要是为了解决 docker 跨网络通信能力不足的问题和特殊网络需求问题。主要包括：桥接网络、插件网络和Overlay网络（原生的跨主机多子网模型）。
 
+Docker在默认情况下，分别会建立一个bridge、一个host和一个none的网络.
+
 Docker安装后会创建自带的三种网络，可以通过docker network ls查看，通过docker network inspect查看详细信息。
+
+```
+默认的名为bridge的网络是有很多限制的，为此，我们可以自行创建bridge类型的网络。默认的bridge网络与自建bridge网络有以下区别：
+
+- 端口不会自行发布，必须使用-p参数才能为外界访问，而使用自建的bridge网络时，container的端口可直接被相同网络下的其他container访问。
+
+- container之间的如果需要通过名字访问，需要--link参数，而如果使用自建的bridge网络，container之间可以通过名字互访。
+```
 
 ### 虚拟网桥docker0
 
@@ -582,7 +592,7 @@ docker容器之间与网络相关的命令
 ```
 如果需要使用宿主机器的iptables管理docker容器的互联，需要在/etc/default/docker配置文件添加 DOCKER_OPTS="=-icc=false --iptables = true"，然后容器网络就可以用宿主机器iptables管理
 
-NOTE: -icc是关闭默认链接，然后设置--iptables=true。启动容器时候，让互联容器用--link启动就可以控制容器之间的链接。
+NOTE: -icc是关闭默认链接，然后设置--iptables=true。启动容器时候，让容器互联用--link启动就可以控制容器之间的链接。
 
 --link：docker启动选项
 $ docker run --link=[container_name]:[alias] [image] [command] 
