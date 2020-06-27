@@ -2,6 +2,8 @@
 
 **解决开发到部署两个阶段因为环境不一致导致的问题。说白了就是，开发能运行，但部署运维却跑步起来！！！通过Docker容器化后，开发、测试、生产环境一致性得到保证。可以简单理解成部署服务编程安装APP**
 
+可以简单理解启动起来的容器是一个小型的Linux系统！！！
+
 # Docker
 
 
@@ -768,6 +770,12 @@ $ docker stop $(docker ps | grep rock | awk '{print $1}')
 $ docker rm $(docker ps -a| grep rock | awk '{print $1}')
 ```
 
+### docker命令小知识
+
+docker exec ： 会创建一个新终端。
+
+docker attach：进入已经存在的终端。
+
 ## 设置Docker资源限制
 
 以下都是docker ran or create所支持的。
@@ -875,6 +883,19 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 通过docker执行mysqldump即可
 
 `docker exec containerId sh -c 'exec mysqldump --all-databases -u[name] -p[password]' > /宿主机器路径/文件名.sql` 
+
+##  portainer安装
+
+一个docker服务的界面客户端，方便查看docker服务器的镜像、启动的容器等。
+
+直接使用`docker run -d -p 8088:9000 --privileged=true portainer/portainer
+`安装。
+
+成功后通过localhost:8088使用浏览器看到登录界面，第一次登录的时候需要设置管理员账户。
+
+登录后界面如下：
+
+![](pic/portainer.png)
 
 
 ## jenkins安装
@@ -1119,6 +1140,50 @@ sudo docker run -ti \
 ![](pic/gerritProdIndexHome.png)
 
 
+# elasticsearch
+
+还是通过安装三步曲：
+
+1. 查找`docker search elasticsearch`
+2. 下载`docker pull elasticsearch`
+3. 去hub.docker.com查看使用命令并启动。本地测试学习用途安装的时候我们可以使用默认的net，去掉net启动参数。`docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:latest`
+4. 测试服务启动成功否。`curl localhost:9200`
+```
+$ curl localhost:9200
+{
+  "name" : "1nrnhTI",
+  "cluster_name" : "elasticsearch",
+  "cluster_uuid" : "LsGIcbWpR8yEr9bLK7NFhg",
+  "version" : {
+    "number" : "5.6.12",
+    "build_hash" : "cfe3d9f",
+    "build_date" : "2018-09-10T20:12:43.732Z",
+    "build_snapshot" : false,
+    "lucene_version" : "6.6.1"
+  },
+  "tagline" : "You Know, for Search"
+}
+
+```
+
+
+从下面数据看到，elasticsearch对内存的需求量还是挺大的。所以我们可以通过-e来修改JAVA启动的内存`docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node"  -e ES_JAVA_OPTS="-Xms64m -Xmx512m" elasticsearch:latest`
+
+```
+docker stats edb563fc077e
+
+CONTAINER ID        NAME                CPU %               MEM USAGE / LIMIT    MEM %               NET I/O             BLOCK I/O           PIDS
+edb563fc077e        elasticsearch       0.33%               2.22GiB / 15.49GiB   14.33%              7.96kB / 0B         0B / 156kB          38
+
+#加了JAVA内存环境参数后
+CONTAINER ID        NAME                CPU %               MEM USAGE / LIMIT     MEM %               NET I/O             BLOCK I/O           PIDS
+ff96a4b80167        elasticsearch       0.78%               244.7MiB / 15.49GiB   1.54%               2.86kB / 0B         0B / 156kB          43
+
+
+```
+
+
+
 # openldap与phpLDAPadmin安装
 
 openldap提供ldap服务，phpLDAPadmin提供一个界面客户端，所以phpLDAPadmin是依赖openldap的。所以先安装openldap服务，如下所示：
@@ -1214,12 +1279,12 @@ echo "Test cmd: docker exec openldap ldapsearch -x -H ldap://localhost -b dc=exa
 
 Docker的主进程（PID1进程）是一个很特殊的存在，它的生命周期就是docker container的生命周期，它得对产生的子进程负责，在写Dockerfile的时候，务必明确PID1进程是什么。
 
-通过Dockerfile中的 ENTRYPOINT 和/或 CMD指令指定。当主进程退出的时候，容器所拥有的PIG命名空间就会被销毁，容器的生命周期也会结束docker最佳实践建议的是一个container一个service。所以命令一但执行完毕就会清掉容器。
+通过Dockerfile中的 ENTRYPOINT 和/或 CMD指令指定。当主进程(PID=1的进程)退出的时候，容器所拥有的PIG命名空间就会被销毁，容器的生命周期也会结束docker最佳实践建议的是一个container一个service。所以命令一但执行完毕就会清掉容器。
 
 所以保证容器运行不停止需要下面两个条件：
 
-1. 进程在容器中前台运行，即你不能使用&将进程变成后台运行
-2. 进程本身是持续运行的
+1. 进程在容器中前台运行，即你不能使用&将进程变成后台运行。
+2. 进程本身是持续运行的。
 
 简单符要求的实例：
 很简单的while循环脚本
@@ -1431,7 +1496,7 @@ $ sudo rm /usr/local/bin/docker-compose
 
 ## docker run 中的-v和-mount区别
 
-最开始 -v 或者 --volume 选项是给单独容器使用， --mount 选项是给集群服务使用。但是从 Docker 17.06 开始，也可以在单独容器上使用 --mount。通常来讲 --mount 选项也更加具体(explicit)和”啰嗦”(verbose)，最大的区别是
+最开始 -v 或者 --volume 选项是给单独容器使用， --mount 选项是给集群服务使用。但是从 Docker 17.06 开始，也可以在单独容器上使用 --mount。通常来讲 --mount 选项也更加具体(explicit)和“啰嗦”(verbose)，最大的区别是
 
 - -v 选项将所有选项集中到一个值
 - --mount 选项将可选项分开
