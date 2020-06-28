@@ -479,6 +479,19 @@ Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运�
 
 https://blog.csdn.net/babys/article/details/71170254
 
+# Docker镜像
+
+docker的镜像由一层一层文件系统组合而成，所以在下载镜像的时候会发现下载很多文件。官方叫UnionFS。
+
+最底层是bootfs(boot file system)主要是bootloader,kernel。当boot加载完成整个内核就在内存中，此时内存的使用权已由bootfs转交给内核，系统也会卸载bootfs。
+
+然后是rootfs(root file system)，在bootfs之上。就是典型的Linux系统中的/dev,/proc,/bin,/etc等标准目录和文件。rootfs实际就是不同操作系统的发行版本。比如Ubuntu,redhat等。
+
+最后就是我们添加的其他相关环境软件，如下图所示。每添加一个变为一层。
+
+![](pic/dockerImageLoader.png)
+
+我们启动Docker容器的时候实际是直接用宿主机的kernel，只需要提供rootfs就可以。所以docker镜像可以看起来很小！！！而虚拟机是要bootfs并加载kernel的过程所以慢且大。
 
 ## 基于容器制作
 
