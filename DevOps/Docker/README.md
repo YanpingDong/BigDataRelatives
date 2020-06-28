@@ -901,7 +901,7 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 
 一个docker服务的界面客户端，方便查看docker服务器的镜像、启动的容器等。
 
-直接使用`docker run -d -p 8088:9000 --privileged=true portainer/portainer
+直接使用`docker run -d -p 8088:9000 -v "/var/run/docker.sock:/var/run/docker.sock" --privileged=true portainer/portainer
 `安装。
 
 成功后通过localhost:8088使用浏览器看到登录界面，第一次登录的时候需要设置管理员账户。
@@ -992,76 +992,6 @@ drwxrwxrwx 3 1000 1000 4096 Mar 10 09:43 ..
 root@6414df6da4b4:/usr/local/tomcat# cd hello/
 root@6414df6da4b4:/usr/local/tomcat/hello# cat index.html 
 <h1>hello world</h1>
-```
-
-## 创建自己的Nginx镜像
-
-先写好deockerfile。实际上dockerfile里面的命令都可以在FROM的环境中运行。可以理解成，你在环境中需要执行哪些操作，在环境中测试过后，封装到dockerfile里面就好。但不是全部命令都可以，典型的如ADD COPY命令。
-
-```dockerfile
-FROM ubuntu:18.04
-
-RUN apt-get update && apt-get install -y nginx
-
-# clear default nginx web
-RUN cd /var/www/html && rm -rf *
-
-# add index page 
-ADD index.html /var/www/html/
-
-EXPOSE 80
-
-VOLUME [ "/var/www/html/" ]
-
-# If you add a custom CMD in the Dockerfile, be sure to include -g daemon off; 
-# in the CMD in order for nginx to stay in the foreground, 
-# so that Docker can track the process properly 
-# (otherwise your container will stop immediately after starting)!
-CMD [ "/usr/sbin/nginx", "-g", "daemon off;" ] 
-
-```
-
-运行测试过程
-
-```bash
-docker build  -f UbuntuNginx.dockerfile -t mynginx:1.0.0 .
-docker run -it -p 8080:80 -v /home/tra/WorkSpace/html/:/var/www/html/ --name mynginxbin -d mynginx:1.0.0
-curl http://localhost:8080
-```
-
-[源代码](src/MyNginx)
-
-如果通过shell脚本先配置再启动，请参看下面的dockerfile,使用exec在shell脚本中启动nginx以替换shell脚本进程，并占用shell脚本原本PID
-
-```
-# Dockerfile部分内容如下
-
-FROM nginx
-LABEL maintainer="xxx <xxx@xxx.com>"
-
-NGX_DOC_ROOT=/data/web/html/
-ADD entrypint.sh /bin/
-
-CMD ["/user/sbin/nginx", "-g", "daemon off;"]
-
-#实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
-
-ENTRYPOINT ["/bin/entrypoint.sh"]
-```
-
-entrypoint.sh部分内容如下：
-```sh
-#!/bin.sh
-# 向my.conf写入数据，设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
-cat > /etc/my.conf << EOF
-server {
-  server_name ${HOSTNAME};
-  listen ${IP:-0.0.0.0}:{PORT:-80};
-  root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
-} 
-EOF
-
-exec "$@"
 ```
 
 ## 安装gitlab
@@ -1195,8 +1125,6 @@ ff96a4b80167        elasticsearch       0.78%               244.7MiB / 15.49GiB 
 
 ```
 
-
-
 # openldap与phpLDAPadmin安装
 
 openldap提供ldap服务，phpLDAPadmin提供一个界面客户端，所以phpLDAPadmin是依赖openldap的。所以先安装openldap服务，如下所示：
@@ -1286,6 +1214,76 @@ echo "Go to: https://$PHPLDAP_IP"
 echo "Login DN: cn=admin,dc=example,dc=org"
 echo "Password: admin"
 echo "Test cmd: docker exec openldap ldapsearch -x -H ldap://localhost -b dc=example,dc=org -D "cn=admin,dc=example,dc=org" -w admin"
+```
+
+## 创建自己的Nginx镜像
+
+先写好deockerfile。实际上dockerfile里面的命令都可以在FROM的环境中运行。可以理解成，你在环境中需要执行哪些操作，在环境中测试过后，封装到dockerfile里面就好。但不是全部命令都可以，典型的如ADD COPY命令。
+
+```dockerfile
+FROM ubuntu:18.04
+
+RUN apt-get update && apt-get install -y nginx
+
+# clear default nginx web
+RUN cd /var/www/html && rm -rf *
+
+# add index page 
+ADD index.html /var/www/html/
+
+EXPOSE 80
+
+VOLUME [ "/var/www/html/" ]
+
+# If you add a custom CMD in the Dockerfile, be sure to include -g daemon off; 
+# in the CMD in order for nginx to stay in the foreground, 
+# so that Docker can track the process properly 
+# (otherwise your container will stop immediately after starting)!
+CMD [ "/usr/sbin/nginx", "-g", "daemon off;" ] 
+
+```
+
+运行测试过程
+
+```bash
+docker build  -f UbuntuNginx.dockerfile -t mynginx:1.0.0 .
+docker run -it -p 8080:80 -v /home/tra/WorkSpace/html/:/var/www/html/ --name mynginxbin -d mynginx:1.0.0
+curl http://localhost:8080
+```
+
+[源代码](src/MyNginx)
+
+如果通过shell脚本先配置再启动，请参看下面的dockerfile,使用exec在shell脚本中启动nginx以替换shell脚本进程，并占用shell脚本原本PID
+
+```
+# Dockerfile部分内容如下
+
+FROM nginx
+LABEL maintainer="xxx <xxx@xxx.com>"
+
+NGX_DOC_ROOT=/data/web/html/
+ADD entrypint.sh /bin/
+
+CMD ["/user/sbin/nginx", "-g", "daemon off;"]
+
+#实际最后执行的是 /bin/entrypoint.sh /user/sbin/nginx -g daemon off(命令行参数会被当作参数传递给ENTRYPOINT指定的程序);其中/user/sbin/nginx -g daemon off;部分会实当成参数传入entrypoint.sh中。所以才能$@引用到并执行替换当前的进程成为主进程PID为1
+
+ENTRYPOINT ["/bin/entrypoint.sh"]
+```
+
+entrypoint.sh部分内容如下：
+```sh
+#!/bin.sh
+# 向my.conf写入数据，设置nginx配置文件， HOSTNAME，PORT可以是运行docker时候传入的命令行参数
+cat > /etc/my.conf << EOF
+server {
+  server_name ${HOSTNAME};
+  listen ${IP:-0.0.0.0}:{PORT:-80};
+  root ${NGX_DOC_ROOT:-/usr/share/nginx/html};
+} 
+EOF
+
+exec "$@"
 ```
 
 # 容器生命周期
