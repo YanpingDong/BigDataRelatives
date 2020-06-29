@@ -637,7 +637,9 @@ WEBTEST_PORT_80_TCP_PROTO=tcp
 $ cat /etc/hosts
 xxx.xxx.xxx.xxx    webtest
 
-默认同宿主机的不同容器是可以直接互联的，但重新启动后也会发生IP变化问题，所以也是可以使用--link来解决
+所以反向去ping的时候不一定能ping通，因为不一定做了--link参数绑定或者做了配置！！！
+
+默认同宿主机的不同容器是可以直接互联的，但重新启动后也会发生IP变化问题，所以也是可以使用--link来解决。
 ```
 
 通过上面描述了解到，docker启动增加了`--iptables = true`参数后，容器之间的互通实际是通过容器的iptables来控制的。那先看下iptables的4表5链，其运行流程如下图：
@@ -1511,6 +1513,36 @@ $ sudo rm /usr/local/bin/docker-compose
 
 [runoob的教程](https://www.runoob.com/docker/docker-compose.html)，这个教程多了些基础的配置指令。比如depends_on等。
 
+## 制作SpringBoot项目镜像
+
+本节打包一个简单的springboot项目。
+
+[源码文件](src/SpringBoot)
+
+我们写个如下的dockerfile。然后将jar文件放到dockerfile同目录下。`docker build -f springboot.dockerfile -t mymvc:1.0.0 .
+` 生成镜像，然后 `docker run -d -P --name mymvc mymvc:1.0.0`运行镜像，因为没有指定端口所以可以通过`docker ps`查看端口映射关系。最后可以使用`http://localhost:yourport/mvc/hello%20world`验证！
+
+```
+FROM java：8
+
+COPY *.jar /app.jar
+
+CMD ["--server.port=8080"]
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "/app.jar"]
+```
+
+上面的CMD实际是给ENTRYPOINT的参数，通过下面运行后的ps输出可以看出。
+
+```bash
+$ docker exec  mymvc ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  6 09:27 ?        00:00:08 java -jar /app.jar --server.port=8080
+root        44     0  0 09:30 ?        00:00:00 ps -ef
+
+```
 
 ## 一些参数的区别
 
