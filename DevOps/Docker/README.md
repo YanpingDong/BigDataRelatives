@@ -102,6 +102,37 @@ $ sudo rm -rf /var/lib/docker
 
 也可以在/etc/default/docker文件中配置```DOCKER_OPTS="--registry-mirror=http://mirror-address"``` 如果该目录下没有该文件自行创建一个即可。该文件是docker的启动配置文件
 
+# Docker镜像
+
+docker的镜像由一层一层文件系统组合而成，所以在下载镜像的时候会发现下载很多文件。官方叫UnionFS。
+
+最底层是bootfs(boot file system)主要是bootloader,kernel。当boot加载完成整个内核就在内存中，此时内存的使用权已由bootfs转交给内核，系统也会卸载bootfs。
+
+然后是rootfs(root file system)，在bootfs之上。就是典型的Linux系统中的/dev,/proc,/bin,/etc等标准目录和文件。rootfs实际就是不同操作系统的发行版本。比如Ubuntu,redhat等。
+
+最后就是我们添加的其他相关环境软件，如下图所示。每添加一个变为一层。
+
+![](pic/dockerImageLoader.png)
+
+我们启动Docker容器的时候实际是直接用宿主机的kernel，只需要提供rootfs就可以。所以docker镜像可以看起来很小！！！而虚拟机是要bootfs并加载kernel的过程所以慢且大。
+
+另外镜像都是**只读*的*，当容器启动时候，一个新的可写层被加载到镜像顶层。这一层通常叫做“容器层”，“容器层”之下的都叫“镜像层”。
+
+一个tomcat的镜像可以用下图描述。
+
+![](pic/imageLayers.png)
+
+分层可以使得“层”被公用，下图可以看到MySQL 5.6和MySQL latest之间的公用部分只需要下载一次,之前下载过的都会显示Already exists
+
+![](pic/imageLayerReuse.png)
+
+```
+NOTE：
+通过构建过程中的中间层镜像做调试。比如：某一步安装net-tools，那么可以启动这个中间镜像，测试安装是否成功
+
+docker history imageId查看构建过程中生成了多少镜像。
+```
+
 ## 镜像生成
 
 制做方式
@@ -112,6 +143,10 @@ $ sudo rm -rf /var/lib/docker
 ### Dockerfile
 
 Dockerfile is nothing but the source code for building Docker images
+
+常用命令如下，使用命令的时候一定要分清楚是构建过程还是运行过程的。
+
+![](pic/dockerfileCommand.jpg)
 
 **概念和命令**
 
@@ -464,56 +499,6 @@ NOTE: Linux的默认值设计方法
 
 ```
 
-# 总结
-
-Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运行image成容器后，可以理解成container是个微型Linux（有基本功能）+通过>导出容器命令运行结果的机器（可以看MySQL数据导出）。所以可以登录该容器，并在该容器运行Linux基础命令，也能把数据导出到宿主机中。登录容器后操作容器中的软件（比如MySQL,Redis或自己写的Springboot程序等）和在一台linux下一模一样。
-
-通过port来成为宿主机器的影子服务器，所有的请求宿主机该port的请求都转给容器。通过volume实现容器和宿主机器数据的同步。
-
-```
-所以在暴露port和volume的时候考虑如下问题：
-1. 程序启动后需要用到哪些端口，比如tomcat启动需要8080,SpringBoot程序启动后也需要8080
-2. 软件哪些数据需要持久化和查看、状态需要外部更改
- 2.1 容器中的软件程序哪些路径下的数据要持久化，那么就volume到宿主机器中
- 2.2 容器中的软件哪些配置需要更改，那么就volume到宿主机器中
- 2.3 容器中的哪些信息记录（比如：log）需要外部方便查看，那么就volume到宿主机器中
-```
-
-我们应该注意到运行docker的hello-world后用`docker ps -a`查看是停止状态，原因很简单，容器里没有持续运行的任务。如果有持续运行的任务就会是UP。
-
-https://blog.csdn.net/babys/article/details/71170254
-
-# Docker镜像
-
-docker的镜像由一层一层文件系统组合而成，所以在下载镜像的时候会发现下载很多文件。官方叫UnionFS。
-
-最底层是bootfs(boot file system)主要是bootloader,kernel。当boot加载完成整个内核就在内存中，此时内存的使用权已由bootfs转交给内核，系统也会卸载bootfs。
-
-然后是rootfs(root file system)，在bootfs之上。就是典型的Linux系统中的/dev,/proc,/bin,/etc等标准目录和文件。rootfs实际就是不同操作系统的发行版本。比如Ubuntu,redhat等。
-
-最后就是我们添加的其他相关环境软件，如下图所示。每添加一个变为一层。
-
-![](pic/dockerImageLoader.png)
-
-我们启动Docker容器的时候实际是直接用宿主机的kernel，只需要提供rootfs就可以。所以docker镜像可以看起来很小！！！而虚拟机是要bootfs并加载kernel的过程所以慢且大。
-
-另外镜像都是**只读*的*，当容器启动时候，一个新的可写层被加载到镜像顶层。这一层通常叫做“容器层”，“容器层”之下的都叫“镜像层”。
-
-一个tomcat的镜像可以用下图描述。
-
-![](pic/imageLayers.png)
-
-分层可以使得“层”被公用，下图可以看到MySQL 5.6和MySQL latest之间的公用部分只需要下载一次,之前下载过的都会显示Already exists
-
-![](pic/imageLayerReuse.png)
-
-```
-NOTE：
-通过构建过程中的中间层镜像做调试。比如：某一步安装net-tools，那么可以启动这个中间镜像，测试安装是否成功
-
-docker history imageId查看构建过程中生成了多少镜像。
-```
-
 ## 基于容器制作镜像
 
 实际是把对一个容器的变更部分变成镜像，也可以理解成把正在运行的容器制作成镜像。
@@ -549,6 +534,28 @@ docker各个部件的关系图如下
 - Dockerfile用来指导Docker制作镜像
 - Docker镜像是最后部署的交付产品，不再是单纯的源代码
 - Docker容器可以理解成Image的运行态
+
+![](pic/dockerLifeTime.png)
+
+# 总结
+
+Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运行image成容器后，可以理解成container是个微型Linux（有基本功能）+通过>导出容器命令运行结果的机器（可以看MySQL数据导出）。所以可以登录该容器，并在该容器运行Linux基础命令，也能把数据导出到宿主机中。登录容器后操作容器中的软件（比如MySQL,Redis或自己写的Springboot程序等）和在一台linux下一模一样。
+
+通过port来成为宿主机器的影子服务器，所有的请求宿主机该port的请求都转给容器。通过volume实现容器和宿主机器数据的同步。
+
+```
+所以在暴露port和volume的时候考虑如下问题：
+1. 程序启动后需要用到哪些端口，比如tomcat启动需要8080,SpringBoot程序启动后也需要8080
+2. 软件哪些数据需要持久化和查看、状态需要外部更改
+ 2.1 容器中的软件程序哪些路径下的数据要持久化，那么就volume到宿主机器中
+ 2.2 容器中的软件哪些配置需要更改，那么就volume到宿主机器中
+ 2.3 容器中的哪些信息记录（比如：log）需要外部方便查看，那么就volume到宿主机器中
+```
+
+我们应该注意到运行docker的hello-world后用`docker ps -a`查看是停止状态，原因很简单，容器里没有持续运行的任务。如果有持续运行的任务就会是UP。
+
+https://blog.csdn.net/babys/article/details/71170254
+
 
 ## 容器的网络模式
 
