@@ -1,3 +1,12 @@
+# Docker存在的问题
+
+1. 无法有效集群
+2. 没有有效容灾、自愈机制
+3. 没有预设编排模板\容器间依赖管理、无法快速、大规模容器调度
+4. 没有统一配置管理中心工具
+5. 没有容器生命周期管理工具
+
+所以才引入了编排工具，compose、swarm or k8s。
 
 # 编排工具
 
@@ -7,7 +16,7 @@
 
 # 什么是Kubernetes
 
-Kubernetes（k8s）是自动化容器操作的开源平台，这些操作包括部署，调度和节点集群间扩展。如果你曾经用过Docker容器技术部署容器，那么可以将Docker看成Kubernetes内部使用的低级别组件。**Kubernetes不仅仅支持Docker，还支持Rocket，这是另一种容器技术**。
+Kubernetes（k8s）是自动化容器操作的开源平台，这些操作包括部署，调度和节点集群间扩展。如果你曾经用过Docker容器技术部署容器，那么可以将Docker看成Kubernetes内部使用的低级别组件。**Kubernetes不仅仅支持Docker，还支持Rocket（这是另一种容器技术）**。
 
 Kubernetes特性：
 
@@ -27,14 +36,14 @@ Kubernetes特性：
 **图元素解析**
 
 1. 每个应用的运行都要依赖一个环境，对于一个 PHP 应用来说，这个环境包括了一个 webserver，一个可读的文件系统和 PHP 的 engine。（对应于图上web server的方框）
-2. 容器为应用提供了隔离的环境，在这个环境里应用就能运行起来（对应于图container方框，比如docker可以是其容器）。但是这些相互隔离的容器需要管理，也需要跟外面的世界沟通。共享的文件系统，网络，调度，负载均衡和资源分配都是挑战。
+2. 容器为应用提供了隔离的环境，在这个环境里应用就能运行起来（对应于图container方框，比如docker可以是其容器）。但是这些相互隔离的容器需要管理，也需要跟外面的世界沟通。**共享的文件系统，网络，调度，负载均衡和资源分配**都是挑战。
 3. pod代表着一个运行着的工作单元（对应于图pod方框）。通常，每个pod中只有一个容器，但有些情况下，如果几个容器是紧耦合的，这几个容器就会运行在同一个pod中。Kubernetes 承担了 pod与外界环境通信的工作。并且同一个Pod里的容器共享同一个网络命名空间，可以使用localhost互相通信;而且同一个Pod里的容器可以共享volume。Pod的里运行的多个容器，其中一个叫主容器，而其它的是辅助的，比如运行一个Nginx服务的Docker，但又需要收集Log这个时候就可以再启一个Log收集的服务Docker,前一个就叫主容器。
 4. Replication controller 提供了一种管理任意数量 pod 的方式。一个 replication controller 包含了一个 pod 模板，这个模板可以被不限次数地复制。通过 replication controller，Kubernetes 可以管理 pod 的生命周期，包括扩/缩容，滚动部署和监控等功能。确保任意时间都有指定数量的Pod“副本”在运行。（对应于图replication controller方框）
    
    ```
     当创建Replication Controller时，需要指定两个东西：
-    Pod模板：用来创建Pod副本的模板
-    Label：Replication Controller需要监控的Pod的标签。
+    1. Pod模板：用来创建Pod副本的模板。
+    2. Label：Replication Controller需要监控的Pod的标签。
    ```
 
 5. service 可以和 Kubernetes 环境中其它部分（包括其它 pod 和 replication controller）进行通信，告诉它们你的应用提供什么服务。Pod可以增减，但是 service 的 IP 地址和端口号是不变的。而且其它应用可以通过 Kubernetes 的服务发现找到你的 service。并且service是定义一系列Pod以及访问这些Pod的策略的一层抽象。Service通过Label找到Pod组。（对应service方框）
@@ -66,11 +75,11 @@ Kubernetes特性：
 
 Master节点包括API Server、Scheduler、Controller manager、etcd。
 
-API Server是整个系统的对外接口，供客户端和其它组件调用，相当于“营业厅”。
+API Server：是整个系统的对外接口，供客户端和其它组件调用，相当于“营业厅”。
 
-Scheduler负责对集群内部的资源进行调度，相当于“调度室”。
+Scheduler：负责对集群内部的资源进行调度，相当于“调度室”。
 
-Controller manager负责管理控制器，相当于“大总管”。
+Controller manager：负责管理控制器，相当于“大总管”。
 
 **Node节点**
 
