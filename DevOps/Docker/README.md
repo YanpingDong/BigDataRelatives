@@ -1555,10 +1555,10 @@ root        44     0  0 09:30 ?        00:00:00 ps -ef
 
 如果需要指定 volume driver 选项，那么必须使用 --mount
 
-- -v 或 --volume: 包含三个 field，使用 : 来分割，所有值需要按照正确的顺序。第一个 field 是 volume 的名字，并且在宿主机上唯一，对于匿名 volume，第一个field通常被省略；第二个field是宿主机上将要被挂载到容器的path或者文件；第三个field可选，比如说 ro
+- -v 或 --volume: 包含三个 field，使用`:` 来分割，所有值需要按照正确的顺序。并且只能创建bind mount。第一个 field 是 volume 的名字，并且在宿主机上唯一，对于匿名 volume，第一个field通常被省略；第二个field是宿主机上将要被挂载到容器的path或者文件；第三个field可选，比如说 ro
 
 - --mount: 包含多个 key-value 对，使用逗号分割。--mount 选项更加复杂，但是各个值之间无需考虑顺序。
-   - type，可以为 bind, volume, tmpfs, 通常为 volume
+   - type，可以为 bind, volume, tmpfs, 如果不指定type选项，则默认为挂载volume
    - source 也可以写成 src，对于 named volumes，可以设置 volume 的名字，对于匿名volume，可以省略
    - destination 可以写成 dst或者 target 该值会挂载到容器
    - readonly 可选，如果使用，表示只读
@@ -1574,4 +1574,41 @@ $ docker run -d \
   --name=nginxtest \
   -v nginx-vol:/usr/share/nginx/html \
   nginx:latest
+```
+
+```
+挂载volume命令格式：[type=volume,]source=my-volume,destination=/path/in/container[,...]
+创建bind mount命令格式：type=bind,source=/path/on/host,destination=/path/in/container[,...]
+如果创建bind mount并指定source则必须是绝对路径，且路径必须已经存在
+```
+
+**创建bind mount和挂载volume的比较**
+
+对比项 |	bind mount |	volume
+---|---|---
+Source位置 |	用户指定 |	/var/lib/docker/volumes/
+Source为空 |	覆盖dest为空 |	保留dest内容
+Source非空 |	覆盖dest内容 |  覆盖dest内容
+Source种类 |	文件或目录 |	只能是目录
+可移植性 |	一般（自行维护） |	强（docker托管）
+宿主直接访问 |	容易（仅需chown） |	受限（需登陆root用户）*
+
+下面示例是一个volumes的详细数据，其中Mountpoint需要使用root用户才能访问
+
+```shell
+$ docker volume inspect dyp-test
+[
+    {
+        "CreatedAt": "2020-07-01T14:09:18+08:00",
+        "Driver": "local",
+        "Labels": {},
+        "Mountpoint": "/var/lib/docker/volumes/dyp-test/_data",
+        "Name": "dyp-test",
+        "Options": {},
+        "Scope": "local"
+    }
+]
+$ cd /var/lib/docker/volumes
+bash: cd: /var/lib/docker/volumes: 权限不够
+
 ```
