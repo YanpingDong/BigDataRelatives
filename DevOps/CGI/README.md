@@ -19,47 +19,6 @@ CGI是一个接口协议，这些环境变量就是属于该协议的内容，�
 
 CGI是一种标准，并不限定语言。所以Java、PHP、Python都可以通过这种方式来生成动态网页。
 
-
-源码下载地址：https://github.com/eatonphil/fastcgi-development-kit/releases
-
-tar -zxvf fastcgi-development-kit-2.4.0.tar.gz
-cd fastcgi-development-kit-2.4.0
-./configure
-sudo make
-sudo make install
-
-
-```cpp
-#include <stdio.h>
-
-#include <stdlib.h>
-
- 
-
-int main(void)
-
-{
-
-    int count = 0;
-
-    printf("Content-type: text/html\r\n"
-
-        "\r\n"
-
-        "<title>CGI Hello!</title>"
-
- 
-
-        "<h1>CGI Hello!</h1>"
-
-        "Request number %d running on host <i>%s</i>\n",
-
-        ++count, getenv("SERVER_NAME"));
-
-    return 0;
-
-}
-```
 ## FastCGI（FCGI）
 
 原来是CGI有一大硬伤。那就是每次CGI请求，那么Apache都有启动一个进程去执行这个CGI程序，即颇具Unix特色的fork-and-execute。当用户请求量大的时候，这个fork-and-execute的操作会严重拖慢Server的进程。而Java的Servlet技术则是一种常驻内存的技术，不会频繁的发生进程上下文的创建和销毁操作。
@@ -67,6 +26,125 @@ int main(void)
 FastCGI技术应运而生。简单来说，其本质就是一个常驻内存的进程池技术，由调度器负责将传递过来的CGI请求发送给处理CGI的handler进程来处理。在一个请求处理完成之后，该处理进程不销毁，继续等待下一个请求的到来。
 
 当然，支持C++的FCGI技术也出现了，Apache有FCGI的模块可以安装，比如mod_fcgid。
+
+### 简单的搭架FCGI
+
+**安装nginx：** `sudo apt-get install nginx`
+
+```
+#开启nginx服务
+service nginx start
+sudo systemctl start nginx.service
+ 
+#查看nginx状态
+service nginx status
+sudo systemctl status nginx.service
+ 
+ 
+#停止nginx服务
+service nginx stop
+sudo systemctl stop nginx.service
+ 
+#重启nginx服务
+service nginx restart 
+sudo systemctl restart nginx.service
+```
+
+下载安装fastcgi:[下载地址](https://github.com/eatonphil/fastcgi-development-kit/releases)，安装过程如下
+
+```
+tar -zxvf fastcgi-development-kit-2.4.0.tar.gz
+cd fastcgi-development-kit-2.4.0
+./configure
+sudo make
+sudo make install
+```
+ubuntu下也可以使用`sudo apt-get install spawn-fcgi`命令安装
+
+
+**编写测试C++ CGI程序,并编译**
+
+```testcgi.cpp
+#include "fcgi_stdio.h"
+#include <stdlib.h>
+
+
+int main(void)
+
+{
+
+    int count = 0;
+
+    while (FCGI_Accept() >= 0)
+
+        printf("Content-type: text/html\r\n"
+
+        "\r\n"
+
+        "<title>FastCGI Hello!</title>"
+
+        "<h1>FastCGI Hello!</h1>"
+
+        "Request number %d running on host <i>%s</i>\n",
+
+        ++count, getenv("SERVER_NAME"));
+
+    return 0;
+}
+```
+
+g++ testcgi.cpp -o demo  -lfcgi
+
+**创建存放CGI程序目录，并通过spawn-fcgi启动**
+
+1. mkdir /usr/share/nginx/cgi-bin
+2. cp demo /usr/share/nginx/cgi-bin
+3. spawn-fcgi -a 127.0.0.1 -p 8081 -C 25 -f /usr/share/nginx/cgi-bin/demo
+
+```
+正常启动返回如下
+$ spawn-fcgi -a 127.0.0.1 -p 8081 -C 25 -f /home/learlee/cig-bin/demo 
+spawn-fcgi: child spawned successfully: PID: 29878
+如果遇到启动错误可以使用ldd查看是否缺了依赖文件，我当时是少了libfcgi.so.0，在fastcgi-development-kit安装目录中找到后拷贝到/usr/local/lib/就好了
+$ ldd demo
+	linux-vdso.so.1 =>  (0x00007ffcf49ea000)
+	libfcgi.so.0 => /usr/local/lib/libfcgi.so.0 (0x00007fbd9be2b000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fbd9bb22000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fbd9b758000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007fbd9c036000)
+```
+
+**修改nginx默认配置，配置cgi，并重启nginx**
+
+```
+sudo vi /etc/nginx/sites-available/default
+
+location ~ \.cgi$ {
+        fastcgi_pass 127.0.0.1:8081;
+        fastcgi_index index.cgi;
+        fastcgi_param SCRIPT_FILENAME fcgi$fastcgi_script_name;
+        include fastcgi_params;
+    }
+sudo service nginx restart
+```
+
+**访问测试**
+
+通过http://localhost/xxx.cgi 访问，看nginx配置，只要是.cgi结尾的都会转发给我们写的CGI程序,所以以下路径都合法
+
+```
+GET http://localhost/aaa/xxxx.cgi
+GET http://localhost/aaa.cgi
+GET http://localhost/aaa/xxxx.cgi
+GET http://localhost/aaa/bbb/xxxx.cgi
+GET http://localhost/aaa/bbb/xxxx.cgi?a=1223
+GET http://localhost/aaa/bbb/xxxx.cgi?a=1223&b=123
+
+以上换成POST DELETE PUT都是合法的，比如下面的。
+POST http://localhost/aaa/xxxx.cgi
+
+```
+
 
 ## Simple CGI（SCGI）
 
