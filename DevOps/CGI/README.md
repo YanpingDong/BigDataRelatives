@@ -17,7 +17,8 @@ SERVER_PORT | 主机的端口号
 
 CGI是一个接口协议，这些环境变量就是属于该协议的内容，所以不论你的server所在的操作系统是Linux还是Windows，也不论你的server是Apache还是Nginx，这些变量的名称和含义都是一样的。实际就是Apache/Nginx在将这些内容填充到环境变量中，而具体填充规范则来自于CGI接口协议。
 
-CGI是一种标准，并不限定语言。所以Java、PHP、Python都可以通过这种方式来生成动态网页。
+CGI是一种标准，并不限定语言。所以Java、PHP、Python都可以通过这种方式来生成动态网页。所以
+CGI可以用任何一种语言编写，只要这种语言具有标准输入、输出和环境变量。
 
 ## FastCGI（FCGI）
 
@@ -26,6 +27,16 @@ CGI是一种标准，并不限定语言。所以Java、PHP、Python都可以通�
 FastCGI技术应运而生。简单来说，其本质就是一个常驻内存的进程池技术，由调度器负责将传递过来的CGI请求发送给处理CGI的handler进程来处理。在一个请求处理完成之后，该处理进程不销毁，继续等待下一个请求的到来。
 
 当然，支持C++的FCGI技术也出现了，Apache有FCGI的模块可以安装，比如mod_fcgid。
+
+**FastCGI特点：**
+
+1. FastCGI在进程中的应用程序，独立于核心web服务器运行,提供了一个比API更安全的环境。(APIs把应用程序的代码与核心的web服务器链接在一起，这意味着在一个错误的API的应用程序可能会损坏其他应用程序或核心服务器; 恶意的API的应用程序代码甚至可以窃取另一个应用程序或核心服务器的密钥。)
+2. FastCGI的不依赖于任何Web服务器的内部架构，因此即使服务器技术的变化, FastCGI依然稳定不变。
+3. FastCGI进程管理器自身初始化，启动多个CGI解释器进程(可见多个php-cgi)并等待来自Web Server的连接。
+
+**FastCGI的不足**
+
+因为是多进程，所以比CGI多线程消耗更多的服务器内
 
 ### 简单的搭架FCGI
 
@@ -96,6 +107,10 @@ int main(void)
 g++ testcgi.cpp -o demo  -lfcgi
 
 **创建存放CGI程序目录，并通过spawn-fcgi启动**
+
+Spawn-FCGI是一个通用的FastCGI管理服务器，它是lighttpd中的一部份，很多人都用Lighttpd的Spawn-FCGI进行FastCGI模式下的管理工作，不过有不少缺点。
+
+Spawn-FCGI目前已经独成为一个项目，更加稳定一些，也给很多Web 站点的配置带来便利。已经有不少站点将它与nginx搭配来解决动态网页。
 
 1. mkdir /usr/share/nginx/cgi-bin
 2. cp demo /usr/share/nginx/cgi-bin
