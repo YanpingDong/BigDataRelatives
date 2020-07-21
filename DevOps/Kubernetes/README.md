@@ -187,7 +187,6 @@ $ sudo apt-mark hold kubelet=1.14.0-00 kubeadm=1.14.0-00 kubectl=1.14.0-00
 
 *kubeadm config print init-defaults 来查看kubeadm的启动配置，更多命令命使用kubeadm help或者Use "kubeadm [command] --help" for more information about a command.*
 
-
 ```
 Note:
 注意: 如果您的机器已经安装了 kubeadm, 请运行 apt-get update && apt-get upgrade 或者 yum update 来升级至最新版本的 kubeadm.
@@ -209,7 +208,159 @@ kubectl为bash和zsh提供自动补全机制，但在这之前要先确认bash-c
 
 通过命令安装成功后，会有`/usr/share/bash-completion/bash_completion`文件生成，然后尝试重启你的shell窗口，执行`type _init_completion`命令，如果成功一切OK。如果没有成功，將`source /usr/share/bash-completion/bash_completion`添加到`～/.bashrc`文件中。在重启Shell窗口就好了。
 
-## kubeadm集群安装
+
+### PKI证书
+
+Kubernets需要PKI证书来做身份验证，但如果你是使用kubeadm来安装的kubernetes，会自动安装该证书。当然你也可以使用你自己私有的证书。
+
+使用Kubeadm安装K8s，证书会存放在/etc/kubernetes/pki目录中
+
+## single-node kubernetres集群
+
+通过安装Minikube，可以通过虚拟机实现单节点K8S集群。但我们需要先使用`grep -E --color 'vmx|svm' /proc/cpuinfo`命令查看机器是否支持虚拟化，如果支持命令是非空输出。
+
+安装KVM或VirtualBox管理程序。当然Minikube同样支持`--driver=none`选项，让K8S组件运行在宿主机上而不是VM中。使用`--driver=none`选项，需要Docker和Linux环境就可以。当然这里需要的使用.deb安装Docker，而不是snap版本的！！！
+
+*none选项会有安全和数据丢失问题*
+
+可选的driver如下（除了none都需要事先安装好）：
+
+-    docker 
+-    virtualbox
+-    podman  (EXPERIMENTAL)
+-    vmwarefusion
+-    kvm2 
+-    hyperkit
+-    hyperv Note that the IP below is dynamic and can change. It can be retrieved with minikube ip.
+-    vmware (VMware unified driver)
+-    parallels 
+-    none (Runs the Kubernetes components on the host and not in a virtual machine. You need to be running Linux and to have Docker installed.)并且你需要是root用户才能启动。要不就用sudo。
+
+**minikube安装**
+
+通过上面了解，我们梳理下minikube安装前置条件：
+- 需要一个Driver（当然可以使node）,这一条算是非强制。
+- 需安装docker，可以参考[Docker文档](../Docker/README.md)
+- 需安装kubectl
+- `grep -E --color 'vmx|svm' /proc/cpuinfo`命令需要有输出，即支持虚拟化
+
+官方安装方式`curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/`，但这种网络一直很不稳定。
+
+
+**启动本地集群**
+
+安装好minikube后启动如下：
+
+```
+$ sudo minikube start --driver=none
+😄  Ubuntu 16.04 上的 minikube v1.12.1
+✨  根据用户配置使用 none 驱动程序
+👍  Starting control plane node minikube in cluster minikube
+🤹  Running on localhost (CPUs=4, Memory=15980MB, Disk=922201MB) ...
+ℹ️  OS release is Ubuntu 16.04.6 LTS
+🐳  正在 Docker 19.03.12 中准备 Kubernetes v1.18.3…
+    > kubeadm.sha256: 65 B / 65 B [--------------------------] 100.00% ? p/s 0s
+    > kubelet.sha256: 65 B / 65 B [--------------------------] 100.00% ? p/s 0s
+    > kubectl.sha256: 65 B / 65 B [--------------------------] 100.00% ? p/s 0s
+    > kubeadm: 37.97 MiB / 37.97 MiB [---------------] 100.00% 1.21 MiB p/s 31s
+    > kubectl: 41.99 MiB / 41.99 MiB [---------------] 100.00% 1.35 MiB p/s 31s
+    > kubelet: 108.04 MiB / 108.04 MiB [-----------] 100.00% 1.43 MiB p/s 1m16s
+🤹  开始配置本地主机环境...
+
+❗  The 'none' driver is designed for experts who need to integrate with an existing VM
+💡  Most users should use the newer 'docker' driver instead, which does not require root!
+📘  For more information, see: https://minikube.sigs.k8s.io/docs/reference/drivers/none/
+
+❗  kubectl 和 minikube 配置将存储在 /home/learlee 中
+❗  如需以您自己的用户身份使用 kubectl 或 minikube 命令，您可能需要重新定位该命令。例如，如需覆盖您的自定义设置，请运行：
+
+    ▪ sudo mv /home/learlee/.kube /home/learlee/.minikube $HOME
+    ▪ sudo chown -R $USER $HOME/.kube $HOME/.minikube
+
+💡  此操作还可通过设置环境变量 CHANGE_MINIKUBE_NONE_USER=true 自动完成
+🔎  Verifying Kubernetes components...
+🌟  Enabled addons: default-storageclass, storage-provisioner
+🏄  完成！kubectl 已经配置至 "minikube"
+```
+
+从提示信息可以看出，官方推荐用docker代替none做启动driver参数,所以推荐使用`minikube start  --driver=docker --registry-mirror=https://registry.docker-cn.com`
+
+```
+$ minikube start --driver=docker --registry-mirror=https://registry.docker-cn.com
+😄  Ubuntu 16.04 上的 minikube v1.12.1
+✨  根据用户配置使用 docker 驱动程序
+👍  Starting control plane node minikube in cluster minikube
+🔥  Creating docker container (CPUs=2, Memory=3900MB) ...
+🐳  正在 Docker 19.03.2 中准备 Kubernetes v1.18.3…
+🔎  Verifying Kubernetes components...
+🌟  Enabled addons: default-storageclass, storage-provisioner
+🏄  完成！kubectl 已经配置至 "minikube"
+
+```
+
+**查看本地集群状态**
+
+完成后可以通过如下命令查看状态
+
+```
+$ sudo minikube status
+minikube
+type: Control Plane
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+
+```
+
+或者通过如下命令查看启动的集群
+
+```
+$ sudo kubectl cluster-info
+Kubernetes master is running at https://192.168.1.107:8443
+KubeDNS is running at https://192.168.1.107:8443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+```
+
+**停止minikube**
+
+```bash
+$ sudo minikube stop
+✋  Stopping "minikube" in none ...
+🛑  Node "minikube" stopped.
+
+#然后再看状态
+$ sudo kubectl cluster-info
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+The connection to the server localhost:8080 was refused - did you specify the right host or port?
+$ sudo minikube status
+minikube
+type: Control Plane
+host: Stopped
+kubelet: Stopped
+apiserver: Stopped
+kubeconfig: Stopped
+```
+
+**删除minikube创建的集群**
+
+```bash
+$ sudo minikube delete
+🔄  正在使用 kubeadm 卸载 Kubernetes v1.18.3…
+🔥  正在删除 none 中的“minikube”…
+💀  Removed all traces of the "minikube" cluster.
+
+#再看状态
+$ sudo kubectl cluster-info
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+The connection to the server localhost:8080 was refused - did you specify the right host or port?
+$ sudo minikube status
+🤷  There is no local cluster named "minikube"
+👉  To fix this, run: "minikube start"
+
+```
 
 ```bash
 [master]$ ps -e | grep -i kube
