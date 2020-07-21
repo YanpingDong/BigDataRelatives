@@ -61,9 +61,7 @@ Kubernetes特性：
 
 # Kubernetes框架
 
-一个K8S系统，通常称为一个K8S集群（Cluster）。
-
-这个集群主要包括两个部分：一个Master节点（主节点）和 一群Node节点（计算节点）
+一个K8S系统，通常称为一个K8S集群（Cluster）。这个集群主要包括两个部分：一个Master节点（主节点）和 一群Node节点（计算节点）
 
 下图是整体结构，是一个主从式集群，Master结点可冗余配置，负责管理和控制。Node节点是工作负载节点，里面是具体的容器。
 
@@ -111,45 +109,21 @@ kubeadm 的简单便捷为大家带来了广泛的用户案例：
 
 kubeadm 的设计初衷是为新用户提供一种便捷的方式来首次试用 Kubernetes， 同时也方便老用户搭建集群测试他们的应用。 此外 kubeadm 也可以跟其它生态系统与/或安装工具集成到一起，提供更强大的功能。
 
+默认情况下K8S使用CRI（Container Runtime Interface）接口来与用户选择的容器运行时通讯。如果用户没有指定运行时，Kubeadm会自动尝试扫描检测安装在本机的常见的容器运行时（container runtime）。实际是通过扫描Unix主机socket。如下所示几种常见的Runtime和对应的socket parth
 
-kubeadm config print init-defaults 来查看kubeadm的启动配置，更多命令命使用kubeadm help或者Use "kubeadm [command] --help" for more information about a command.
+Runtime |	Path to Unix domain socket
+---|---
+Docker | /var/run/docker.sock
+containerd | /run/containerd/containerd.sock
+CRI-O	| /var/run/crio/crio.sock
 
-```
-Note:
-注意: 如果您的机器已经安装了 kubeadm, 请运行 apt-get update && apt-get upgrade 或者 yum update 来升级至最新版本的 kubeadm.
-
-升级过程中，kubelet 会每隔几秒钟重启并陷入了不断循环等待 kubeadm 发布指令的状态。 这个死循环的过程是正常的，当升级并初始化完成您的主节点之后，kubelet 才会正常运行。
-
-kubeadm 的整体功能目前还是 Beta 状态，然而很快在 2018 年就会转换成正式发布 (GA) 状态。
-
-Kubernetes 发现版本的通常只维护支持九个月，在维护周期内，如果发现有比较重大的 bug 或者安全问题的话， 可能会发布一个补丁版本。同时也适用于 kubeadm。
-```
+如果Docker和containerd都被检测到，docker的有限级更高。因为在Docker 18.09版本后containerd会和Docker一起被安装。如果是其他组合被检测到，kubeadm会退出并报错。（比如containerd和CRIO同时被检测到）
 
 ## 安装
 
 Master节点需要：安装kubelet，kubeadm，kubectl，Dokcer
 
 Node节点需要：安装kubelet，kubeadm，kubectl，Dokcer，并加入master节点
-
-使用国内镜像站
-
-```bash
-sudo apt-get update && sudo apt-get install -y apt-transport-https curl
-
-sudo curl -s https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | sudo apt-key add -
-
-sudo tee /etc/apt/sources.list.d/kubernetes.list << EOF
-deb https://mirrors.aliyun.com/kubernetes/apt kubernetes-xenial main
-EOF
-
-sudo apt-get update
-
-#查看版本
-apt-cache madison kubeadm
-#查看过版本之后就可以指定版本安装
-$ sudo apt-get install -y kubelet=1.14.0-00 kubeadm=1.14.0-00 kubectl=1.14.0-00
-$ sudo apt-mark hold kubelet=1.14.0-00 kubeadm=1.14.0-00 kubectl=1.14.0-00
-```
 
 **环境设置**
 
@@ -181,6 +155,59 @@ sudo usermod -aG docker ${USER}
 sudo service docker start
 ```
 
+**安装kubeadm,kubelet,kubectl**
+
+这三个包需要安装在所有的机器上。
+
+- kubeadm: 用来引导创建cluster的命令工具
+
+- kubelet: 在所有集群机器上，用来启动pods和containers.
+
+- kubectl: 用来访问集群的命令行
+
+kubeadm不会安装和管理kubelet和kubectl，所以你需要保证这两个包的版本能匹配Kubeadm安装的K8S控制面板。使用国内镜像站
+
+```bash
+sudo apt-get update && sudo apt-get install -y apt-transport-https curl
+
+sudo curl -s https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | sudo apt-key add -
+
+sudo tee /etc/apt/sources.list.d/kubernetes.list << EOF
+deb https://mirrors.aliyun.com/kubernetes/apt kubernetes-xenial main
+EOF
+
+sudo apt-get update
+
+#查看版本
+apt-cache madison kubeadm
+#查看过版本之后就可以指定版本安装
+$ sudo apt-get install -y kubelet=1.14.0-00 kubeadm=1.14.0-00 kubectl=1.14.0-00
+$ sudo apt-mark hold kubelet=1.14.0-00 kubeadm=1.14.0-00 kubectl=1.14.0-00
+```
+
+*kubeadm config print init-defaults 来查看kubeadm的启动配置，更多命令命使用kubeadm help或者Use "kubeadm [command] --help" for more information about a command.*
+
+
+```
+Note:
+注意: 如果您的机器已经安装了 kubeadm, 请运行 apt-get update && apt-get upgrade 或者 yum update 来升级至最新版本的 kubeadm.
+
+升级过程中，kubelet 会每隔几秒钟重启并陷入了不断循环等待 kubeadm 发布指令的状态。 这个死循环的过程是正常的，当升级并初始化完成您的主节点之后，kubelet 才会正常运行。
+
+kubeadm 的整体功能目前还是 Beta 状态，然而很快在 2018 年就会转换成正式发布 (GA) 状态。
+
+Kubernetes 发现版本的通常只维护支持九个月，在维护周期内，如果发现有比较重大的 bug 或者安全问题的话， 可能会发布一个补丁版本。同时也适用于 kubeadm。
+```
+
+## 启动Shell自动补全
+
+kubectl为bash和zsh提供自动补全机制，但在这之前要先确认bash-completion在本机是有的，可以通过`type _init_completion`查看，如果有，然后在Linux下只需要使用`kubectl completion bash`命令就可以。
+
+### 安装bash-completion
+
+如果没有安装可以用`apt-get install bash-completion or yum install bash-completion`命令安装。
+
+通过命令安装成功后，会有`/usr/share/bash-completion/bash_completion`文件生成，然后尝试重启你的shell窗口，执行`type _init_completion`命令，如果成功一切OK。如果没有成功，將`source /usr/share/bash-completion/bash_completion`添加到`～/.bashrc`文件中。在重启Shell窗口就好了。
 
 ## kubeadm集群安装
 
@@ -220,7 +247,7 @@ Create a two-machine cluster with one control-plane node
 ┌──────────────────────────────────────────────────────────┐
 │ On the second machine:                                   │
 ├──────────────────────────────────────────────────────────┤
-│ worker# kubeadm join <arguments-returned-from-init>      │
+│ worker # kubeadm join <arguments-returned-from-init>      │
 └──────────────────────────────────────────────────────────┘
 
 You can then repeat the second step on as many other machines as you like.
