@@ -73,11 +73,13 @@ Kubernetes特性：
 
 Master节点包括API Server、Scheduler、Controller manager、etcd。
 
-API Server：是整个系统的对外接口，供客户端和其它组件调用，相当于“营业厅”。
+API Server(kube-apiserver)：是整个系统的对外接口,集群的统一入口 ，各组件协调者，以RESTful API提供接口服务，所有对象资源的增删改查和监听操作都交给APIServer处理后再提交给Etcd存储;供客户端和其它组件调用，相当于“营业厅”。
 
-Scheduler：负责对集群内部的资源进行调度，相当于“调度室”。
+Scheduler：负责对集群内部的资源进行调度，相当于“调度室”。也就是根据调度算法为新创建的Pod选择一个Node节点，可以任意部署,可以部署在同一个节点上,也可以部署在不同的节点上。
 
-Controller manager：负责管理控制器，相当于“大总管”。
+Controller manager(kube-controller-manager)：负责管理控制器，相当于“大总管”。也就是处理集群中常规后台任务，一个资源对应一个控制器，而ControllerManager就是负责管理这些控制器的。
+
+etcd： 分布式键值存储系统。用于保存集群状态数据，比如Pod、Service等对象信息。
 
 **Node节点**
 
@@ -85,9 +87,9 @@ Controller manager：负责管理控制器，相当于“大总管”。
 
 Node节点包括Docker、kubelet、kube-proxy、Fluentd、kube-dns（可选），还有就是Pod。
 
-- Docker: 创建容器的，但k8s支持的容器并不只限于Docker。
-- Kubelet: 主要负责监视（即Master Scheduler）指派到它所在Node上的Pod，包括创建、修改、监控、删除等。
-- Kube-proxy: 主要负责为Pod对象提供代理。
+- Docker: 容器引擎，运行容器，但k8s支持的容器并不只限于Docker。比如rocket也可以
+- Kubelet: kubelet是Master在Node节点上的Agent，管理本机运行容器的生命周期，主要负责监视（即Master Scheduler）指派到它所在Node上的Pod，包括创建、修改、监控、删除等。
+- Kube-proxy: 在Node节点上实现Pod网络代理，维护网络规则和四层负载均衡工作。
 - Fluentd: 主要负责日志收集、存储与查询。
 
 ```
@@ -98,7 +100,7 @@ Pod是Kubernetes最基本的操作单元。一个Pod代表着集群中运行的�
 
 # Kubeadm
 
-kubeadm 能帮助您建立一个小型的符合最佳实践的 Kubernetes 集群。通过使用 kubeadm, 您的集群会符合 Kubernetes 合规性测试的要求. Kubeadm 也支持其他的集群生命周期操作，比如升级、降级和管理启动引导令牌。
+kubeadm 能帮助您建立一个小型的符合最佳实践的Kubernetes 集群。通过使用 kubeadm, 您的集群会符合 Kubernetes 合规性测试的要求. Kubeadm 也支持其他的集群生命周期操作，比如升级、降级和管理启动引导令牌。
 
 因为您可以在不同类型的机器（比如笔记本、服务器和树莓派等）上安装 kubeadm，因此它非常适合与 Terraform 或 Ansible 这类自动化管理系统集成。
 
@@ -119,7 +121,13 @@ CRI-O	| /var/run/crio/crio.sock
 
 如果Docker和containerd都被检测到，docker的有限级更高。因为在Docker 18.09版本后containerd会和Docker一起被安装。如果是其他组合被检测到，kubeadm会退出并报错。（比如containerd和CRIO同时被检测到）
 
-## 安装
+## PKI证书
+
+Kubernets需要PKI证书来做身份验证，但如果你是使用kubeadm来安装的kubernetes，会自动安装该证书。当然你也可以使用你自己私有的证书。
+
+使用Kubeadm安装K8s，证书会存放在/etc/kubernetes/pki目录中
+
+## kubeadm创建集群
 
 Master节点需要：安装kubelet，kubeadm，kubectl，Dokcer
 
@@ -193,8 +201,6 @@ Note:
 
 升级过程中，kubelet 会每隔几秒钟重启并陷入了不断循环等待 kubeadm 发布指令的状态。 这个死循环的过程是正常的，当升级并初始化完成您的主节点之后，kubelet 才会正常运行。
 
-kubeadm 的整体功能目前还是 Beta 状态，然而很快在 2018 年就会转换成正式发布 (GA) 状态。
-
 Kubernetes 发现版本的通常只维护支持九个月，在维护周期内，如果发现有比较重大的 bug 或者安全问题的话， 可能会发布一个补丁版本。同时也适用于 kubeadm。
 ```
 
@@ -208,16 +214,134 @@ kubectl为bash和zsh提供自动补全机制，但在这之前要先确认bash-c
 
 通过命令安装成功后，会有`/usr/share/bash-completion/bash_completion`文件生成，然后尝试重启你的shell窗口，执行`type _init_completion`命令，如果成功一切OK。如果没有成功，將`source /usr/share/bash-completion/bash_completion`添加到`～/.bashrc`文件中。在重启Shell窗口就好了。
 
+### master节点部署
 
-### PKI证书
+执行下面命令就可以在你的master机器上启动K8S相关服务
 
-Kubernets需要PKI证书来做身份验证，但如果你是使用kubeadm来安装的kubernetes，会自动安装该证书。当然你也可以使用你自己私有的证书。
+Step1:生成init启动配置文件
 
-使用Kubeadm安装K8s，证书会存放在/etc/kubernetes/pki目录中
+```
+$ kubeadm config print init-defaults > kubeadm-config.yaml
+$ more kubeadm-config.yaml 
+apiVersion: kubeadm.k8s.io/v1beta2
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: abcdef.0123456789abcdef
+  ttl: 24h0m0s
+  usages:
+  - signing
+  - authentication
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: 1.2.3.4  ##宿主机IP地址
+  bindPort: 6443
+nodeRegistration:
+  criSocket: /var/run/dockershim.sock
+  name: learleepc   ##当前节点在k8s集群中名称
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+---
+apiServer:
+  timeoutForControlPlane: 4m0s
+apiVersion: kubeadm.k8s.io/v1beta2
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
+controlPlaneEndpoint: "你的负载均衡器IP地址:你的负载均衡器端口"
+controllerManager: {}
+dns:
+  type: CoreDNS
+etcd:
+  local:
+    dataDir: /var/lib/etcd
+imageRepository: registry.cn-hangzhou.aliyuncs.com/google_containers    ##使用阿里的镜像地址，否则无法拉取镜像
+kind: ClusterConfiguration
+kubernetesVersion: v1.18.0
+networking:
+  dnsDomain: cluster.local
+  serviceSubnet: 10.96.0.0/12 
+scheduler: {}
 
+```
+
+Step2:拉取镜像，并启动
+```
+$ kubeadm  config images pull  --config kubeadm-config.yaml  
+
+$ kubeadm init --config=kubeadm-config.yaml --upload-certs | tee kubeadm-init.log
+```
+
+简单方式，可以直接使用下面的命令启动maseter,跳过上面两步
+
+```
+kubeadm init \
+--apiserver-advertise-address=your_master_host_id \
+--image-repository registry.aliyuncs.com/google_containers \
+--kubernetes-version v1.15.0 \
+--control-plane-endpoint "LOAD_BALANCER_DNS:LOAD_BALANCER_PORT"
+```
+由于默认拉取镜像地址k8s.gcr.io国内无法访问，这里指定阿里云镜像仓库地址。
+
+启动成功后会输出如下信息,并且告知了如何添加master和node节点：
+
+```
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+You can now join any number of the control-plane node running the following command on each as root:
+# master节点用以下命令加入集群：
+  kubeadm join your_master_ip:port --token abcdef.0123456789abcdef \
+    --discovery-token-ca-cert-hash sha256:37041e2b8e0de7b17fdbf73f1c79714f2bddde2d6e96af2953c8b026d15000d8 \
+    --control-plane --certificate-key 8d3f96830a1218b704cb2c24520186828ac6fe1d738dfb11199dcdb9a10579f8
+
+Please note that the certificate-key gives access to cluster sensitive data, keep it secret!
+As a safeguard, uploaded-certs will be deleted in two hours; If necessary, you can use
+"kubeadm init phase upload-certs --upload-certs" to reload certs afterward.
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+# 工作节点用以下命令加入集群
+kubeadm join your_master_ip:port --token abcdef.0123456789abcdef \
+    --discovery-token-ca-cert-hash sha256:37041e2b8e0de7b17fdbf73f1c79714f2bddde2d6e96af2953c8b026d15000d8 
+```
+
+### node节点部署
+
+使用master节点启动信息中的提示命令就可以启动了！
+
+当然如果需要配置文件启动可以使用如下命令生成默认配置文件
+
+```
+$ kubeadm config print join-defaults
+apiVersion: kubeadm.k8s.io/v1beta2
+caCertPath: /etc/kubernetes/pki/ca.crt
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: kube-apiserver:6443
+    token: abcdef.0123456789abcdef
+    unsafeSkipCAVerification: true
+  timeout: 5m0s
+  tlsBootstrapToken: abcdef.0123456789abcdef
+kind: JoinConfiguration
+nodeRegistration:
+  criSocket: /var/run/dockershim.sock
+  name: learleepc
+  taints: null
+
+```
 ## single-node kubernetres集群
 
-通过安装Minikube，可以通过虚拟机实现单节点K8S集群。但我们需要先使用`grep -E --color 'vmx|svm' /proc/cpuinfo`命令查看机器是否支持虚拟化，如果支持命令是非空输出。
+通过安装Minikube，可以通过虚拟机实现单节点K8S集群（单节点或通过虚拟化技术实现的单机集群）。但我们需要先使用`grep -E --color 'vmx|svm' /proc/cpuinfo`命令查看机器是否支持虚拟化，如果支持命令是非空输出。
 
 安装KVM或VirtualBox管理程序。当然Minikube同样支持`--driver=none`选项，让K8S组件运行在宿主机上而不是VM中。使用`--driver=none`选项，需要Docker和Linux环境就可以。当然这里需要的使用.deb安装Docker，而不是snap版本的！！！
 
@@ -408,6 +532,164 @@ $ sudo minikube status
 
 ```
 
+### 访问本地集群
+
+前面也说过，通过minikube创建的集群可以当成真集群使用，所以自然是可以通过kubctl命令行工具来访问和控制，前面示例也展示过了。事实是在minikube start的时候创建好的ninikube的沟通上下文配置，官方解释如下。
+
+````
+The minikube start command creates a kubectl context called "minikube". This context contains the configuration to communicate with your Minikube cluster.
+
+Minikube sets this context to default automatically, but if you need to switch back to it in the future, run:
+
+kubectl config use-context minikube
+
+Or pass the context on each command like this:
+
+kubectl get pods --context=minikube
+````
+
+我们现在可以通过`kubectl config view`来查看minikube创建的集群的基本信息。
+
+```bash
+$ kubectl config view
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: DATA+OMITTED
+    server: https://10.120.142.58:6443
+  name: kubernetes
+- cluster:
+    certificate-authority: /home/learlee/.minikube/ca.crt
+    server: https://172.17.0.4:8443
+  name: minikube
+contexts:
+- context:
+    cluster: kubernetes
+    user: kubernetes-admin
+  name: kubernetes-admin@kubernetes
+- context:
+    cluster: minikube
+    user: minikube
+  name: minikube
+current-context: minikube
+kind: Config
+preferences: {}
+users:
+- name: kubernetes-admin
+  user:
+    client-certificate-data: REDACTED
+    client-key-data: REDACTED
+- name: minikube
+  user:
+    client-certificate: /home/learlee/.minikube/profiles/minikube/client.crt
+    client-key: /home/learlee/.minikube/profiles/minikube/client.key
+```
+
+如果你想通过curl和wget命令访问API SERVER，可以使用以下几种方式开放API SERVER的REST API
+
+1. 使用kubectl让API SERVER运行在代理模式下,这中方式是官方推荐的！
+   
+   ```shell
+   $ kubectl proxy --port=8080 &
+   $ Starting to serve on 127.0.0.1:8080
+   #验证
+   $ curl http://localhost:8080/api/
+    {
+      "kind": "APIVersions",
+      "versions": [
+        "v1"
+      ],
+      "serverAddressByClientCIDRs": [
+        {
+          "clientCIDR": "0.0.0.0/0",
+          "serverAddress": "172.17.0.4:8443"
+        }
+      ]
+    }
+   ```
+2. 通过鉴权Token访问API Server
+
+   ```shell
+   #获取server name 和 IP
+    $ kubectl config view -o jsonpath='{"Cluster name\tSrver\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}'
+    Cluster name	Server
+    minikube	https://172.17.0.4:8443
+
+   #创建token
+    $ kubectl get secrets -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='default')].data.token}"|base64 --decode
+    eyJhbGciOiJSUzI1NiIsImtpZCI6IlFUMnpvLTkxWUhQLVcxdm1veGU0Rl9PNFFoVzMzVG5sV0Rha0VLN1hXX3cifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRlZmF1bHQtdG9rZW4tNDg2dmMiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGVmYXVsdCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6Ijg4MWNjMWE5LTAzYTctNDc1Ni05ZDRlLThhOWZmZGUzZDBjNyIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkZWZhdWx0OmRlZmF1bHQifQ.O1Ku_GkiQPWZUc78ReyjVFNp5mrYdHYx-oyHchmZHYkzrcXjGyV_HorMtCSVngh0b149aNx_CtPt-Zk8C6Hp92MojiMVHkbsnNg7CiU8Nf_kVHfwJ_r9fYk4kOigl7_YDxTFENpnZCeq4HuO6uGjqyKKhdOSx2_ZvJce5riXVMX9RRywg4CaBmWoM9dky9hT47aFa6q8_KFIYZRfKtSLnCGveyMCCfG1wC2K2EGE3kcLD1f7EvxcAxGqWxlnoOuhxOMR8cwDRRWKLmFhNHjR89GxzLrde4-X-Eniza-C4EtCg5zhWKn3gW30wW2ZxyXi1Wr-N6FdjnrMl2itc9KDMw
+    
+    #使用token访问API Server
+    (base)  learlee@learleePC:~$ curl -X GET https://172.17.0.4:8443/api --header "Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IlFUMnpvLTkxWUhQLVcxdm1veGU0Rl9PNFFoVzMzVG5sV0Rha0VLN1hXX3cifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRlZmF1bHQtdG9rZW4tNDg2dmMiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGVmYXVsdCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6Ijg4MWNjMWE5LTAzYTctNDc1Ni05ZDRlLThhOWZmZGUzZDBjNyIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkZWZhdWx0OmRlZmF1bHQifQ.O1Ku_GkiQPWZUc78ReyjVFNp5mrYdHYx-oyHchmZHYkzrcXjGyV_HorMtCSVngh0b149aNx_CtPt-Zk8C6Hp92MojiMVHkbsnNg7CiU8Nf_kVHfwJ_r9fYk4kOigl7_YDxTFENpnZCeq4HuO6uGjqyKKhdOSx2_ZvJce5riXVMX9RRywg4CaBmWoM9dky9hT47aFa6q8_KFIYZRfKtSLnCGveyMCCfG1wC2K2EGE3kcLD1f7EvxcAxGqWxlnoOuhxOMR8cwDRRWKLmFhNHjR89GxzLrde4-X-Eniza-C4EtCg5zhWKn3gW30wW2ZxyXi1Wr-N6FdjnrMl2itc9KDMw" --insecure
+    {
+      "kind": "APIVersions",
+      "versions": [
+        "v1"
+      ],
+      "serverAddressByClientCIDRs": [
+        {
+          "clientCIDR": "0.0.0.0/0",
+          "serverAddress": "172.17.0.4:8443"
+        }
+      ]
+    }
+   ```
+
+   上面我是把过程拆分了，下面是官方标准流程
+
+   ```
+  # Check all possible clusters, as your .KUBECONFIG may have multiple contexts:
+  kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}'
+
+  # Select name of cluster you want to interact with from above output:
+  export CLUSTER_NAME="some_server_name"
+
+  # Point to the API server referring the cluster name
+  APISERVER=$(kubectl config view -o jsonpath="{.clusters[?(@.name==\"$CLUSTER_NAME\")].cluster.server}")
+
+  # Gets the token value
+  TOKEN=$(kubectl get secrets -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='default')].data.token}"|base64 --decode)
+
+  # Explore the API with TOKEN
+  curl -X GET $APISERVER/api --header "Authorization: Bearer $TOKEN" --insecure
+   ```
+
+3. 通过各个软件开发包访问，支持的开发语言：Java python js go
+   
+   ```python
+    # 先pip install kubernetes安装库
+    from kubernetes import client, config
+
+    config.load_kube_config()
+
+    v1=client.CoreV1Api()
+    print("Listing pods with their IPs:")
+    ret = v1.list_pod_for_all_namespaces(watch=False)
+    for i in ret.items:
+        print("%s\t%s\t%s" % (i.status.pod_ip, i.metadata.namespace, i.metadata.name))
+    #输出如下
+    /home/learlee/PycharmProjects/MyTest/.venv/bin/python /home/learlee/PycharmProjects/MyTest/KubeAccessTest.py
+    Listing pods with their IPs:
+    172.18.0.5	default	hello-minikube
+    172.18.0.7	default	hello-minikube-5655c9d946-qrptw
+    172.18.0.9	default	hello-minikube1-7cdf48f69f-hbd4l
+    172.18.0.6	default	mymvc
+    172.18.0.8	default	mytest-5d65d5ff4b-4b4j2
+    172.18.0.2	kube-system	coredns-546565776c-nl74z
+    172.17.0.4	kube-system	etcd-minikube
+    172.17.0.4	kube-system	kube-apiserver-minikube
+    172.17.0.4	kube-system	kube-controller-manager-minikube
+    172.17.0.4	kube-system	kube-proxy-648ws
+    172.17.0.4	kube-system	kube-scheduler-minikube
+    172.17.0.4	kube-system	storage-provisioner
+    172.18.0.4	kubernetes-dashboard	dashboard-metrics-scraper-dc6947fbf-fpqfp
+    172.18.0.3	kubernetes-dashboard	kubernetes-dashboard-6dbb54fd95-l9md8
+
+    Process finished with exit code 0
+
+   ```
+
+
 ## 集群版本
 
 国内需要通过--image-repository指定国内代理，以下是源代码的解释。
@@ -415,8 +697,7 @@ $ sudo minikube status
 ```
 startCmd.Flags().String(imageRepository, "", "Alternative image repository to pull docker images from. This can be used when you have limited access to gcr.io. For Chinese mainland users, you may use local gcr.io mirrors such as registry.cn-hangzhou.aliyuncs.com/google_containers")
 ```
-
- kubeadm init \
+kubeadm init \
   --apiserver-advertise-address=192.168.202.132 \
   --image-repository registry.aliyuncs.com/google_containers \
   --kubernetes-version v1.16.0 \
