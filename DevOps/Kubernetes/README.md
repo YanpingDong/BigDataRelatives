@@ -322,6 +322,52 @@ KubeDNS is running at https://192.168.1.107:8443/api/v1/namespaces/kube-system/s
 
 ```
 
+启动成功后就可以通过kubectl和你的k8s本地集群进行交互了。就像是一个完整的多物理机集群。例如，启动服务器：`kubectl create deployment hello-minikube --image=k8s.gcr.io/echoserver:1.4`
+
+将服务公开为NodePort(8080端口是镜像对外公布的端口）：
+`kubectl expose deployment hello-minikube --type=NodePort --port=8080`
+
+minikube使您可以在浏览器中轻松打开此公开的端点：
+
+```
+$ minikube service hello-minikube1
+
+|-----------|-----------------|-------------|-------------------------|
+| NAMESPACE |      NAME       | TARGET PORT |           URL           |
+|-----------|-----------------|-------------|-------------------------|
+| default   | hello-minikube1 |        8080 | http://172.17.0.4:31466 |
+|-----------|-----------------|-------------|-------------------------|
+* 正通过默认浏览器打开服务 default/hello-minikube1...
+````
+
+一切顺利的话可以在浏览器看到如下界面：
+
+![](pic/hellominikubeDemo.png)
+
+如过一切顺利还好，但大概率是会有错，通过后面的dashboard可以看到没办法拉取镜像，错误如下：
+
+```
+Failed to pull image "k8s.gcr.io/echoserver:1.4": rpc error: code = Unknown desc = Error response from daemon: Get https://k8s.gcr.io/v2/: net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+```
+
+如果报错可以尝试，修改镜像的：`kubectl create deployment hello-minikube--image=mirrorgooglecontainers/echoserver:1.4
+deployment.apps/hello-minikube1 created`然后在执行后面打开端口和暴露服务的命令
+
+
+**启动dashboard**
+
+```
+$ minikube dashboard
+🔌  正在开启 dashboard ...
+🤔  正在验证 dashboard 运行情况 ...
+🚀  Launching proxy ...
+🤔  正在验证 proxy 运行状况 ...
+🎉  Opening http://127.0.0.1:39163/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/ in your default browser...
+```
+
+![](pic/MinikubDashboard.png)
+
+
 **停止minikube**
 
 ```bash
@@ -361,6 +407,22 @@ $ sudo minikube status
 👉  To fix this, run: "minikube start"
 
 ```
+
+## 集群版本
+
+国内需要通过--image-repository指定国内代理，以下是源代码的解释。
+
+```
+startCmd.Flags().String(imageRepository, "", "Alternative image repository to pull docker images from. This can be used when you have limited access to gcr.io. For Chinese mainland users, you may use local gcr.io mirrors such as registry.cn-hangzhou.aliyuncs.com/google_containers")
+```
+
+ kubeadm init \
+  --apiserver-advertise-address=192.168.202.132 \
+  --image-repository registry.aliyuncs.com/google_containers \
+  --kubernetes-version v1.16.0 \
+  --service-cidr=10.1.0.0/16 \
+  --pod-network-cidr=10.244.0.0/16
+
 
 ```bash
 [master]$ ps -e | grep -i kube
