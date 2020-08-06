@@ -819,7 +819,7 @@ abc
 
 ### 指定启动容器的用户身份
 
-可以通过Dockerfile中添加USER来决定使用哪个用户，如下,其中useradd创建的用户UID指定为1000，如果1000是宿主机存在的，那么就只是给宿主机的UID=1000的用户添加了组
+可以通过Dockerfile中添加USER来决定使用哪个用户，如下,其中useradd创建的用户UID指定为1000，如果1000是宿主机存在的，那么就只是给宿主机的UID=1000的用户添加了组。但USER这个命令相当与给容器里的用户起了别名，如果宿主机是learlee(uid=1000)那么在容器中就叫appuser，但两个在Linux内核看来是一样的，都是UID=1000的那个用户。
 
 ```dockerfile
 FROM ubuntu
