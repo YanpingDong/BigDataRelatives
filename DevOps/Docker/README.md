@@ -556,7 +556,6 @@ Dockerfile可以看成将手动配置Linux机器变成脚本化配置，而运�
 
 https://blog.csdn.net/babys/article/details/71170254
 
-
 ## 容器的网络模式
 
 1. None --- 容器不能访问外部网络，内部存在回路地址。
@@ -763,6 +762,82 @@ netmask 255.255.255.0
 gateway 10.211.55.1
 bridge_ports eth0　＃指定物理机网卡，重启后用ifconfig查看，eth0不再具有自己的IP地址，这样实际是br0网桥和宿主机网卡进行了绑定
 ```
+
+## Docker容器中的uid和gid
+
+默认情况下，容器中的进程以 root 用户权限运行，并且这个 root 用户和宿主机中的 root 是同一个用户。
+
+那么什么是uid和gid？实际这两个由Linux内核负责管理，并通过内核级别的系统调用来决定是否应该为某个请求授予特权。比如:当进程试图写入文件时，内核会检查创建进程的 uid 和 gid，以确定它是否有足够的权限修改文件。注意，内核使用的是 uid 和 gid，而不是用户名和组名。
+
+说回容器技术，与虚拟机技术不同：同一主机上运行的所有容器共享同一个内核(主机的内核)。容器化带来的巨大价值在于所有这些独立的容器(其实是进程)可以共享一个内核。这意味着即使由成百上千的容器运行在 docker 宿主机上，但**内核控制的 uid 和 gid 则仍然只有一套**。所以同一个 uid 在宿主机和容器中代表的是同一个用户(即便在不同的地方显示了不同的用户名)。
+
+看下面示例，我们启动一个ubuntu容器，运行sleep命令看下默认的启动是运行在什么权限。
+
+```bash
+$ docker run -d  --name sleepme ubuntu:18.04 sleep infinity
+$ ps aux | grep -i sleep
+root      1516  0.0  0.0   4532   752 ?        Ss   13:30   0:00 sleep infinity
+--color=auto -i sleep
+root     27696  0.0  0.0   4376   656 ?        S    13:04   0:00 sleep 3000
+$ docker exec -it sleepme bash
+root@431cbf660ddc:/# ps aux|grep sleep
+root         1  0.0  0.0   4532   752 ?        Ss   05:30   0:00 sleep infinity
+```
+
+宿主机和容器指示sleep infinity运行的权限都是root。
+
+```shell
+#在test目录下创建一个testfile，并使用sudo chown root:root testfile转个root账户
+$ ls -la
+总用量 12
+drwxrwxr-x 2 learlee learlee 4096 8月   6 13:55 .
+drwxrwxr-x 9 learlee learlee 4096 8月   6 13:42 ..
+-rw-rw-r-- 1 root    root       4 8月   6 13:58 testfile
+
+# 启动ubuntu镜像挂载存放testfile的目录
+$ docker run --rm -it -w=/test -v /home/learlee/DockerRun/test:/test ubuntu:18.04
+root@bf93121d9a68:/test# ls 
+testfile
+# 发现在容器里是可以写testfile的,并且权限也和容器外一样是root的文件
+root@bf93121d9a68:/test# cat "abc" > testfile
+cat: abc: No such file or directory
+root@bf93121d9a68:/test# ls
+testfile
+root@bf93121d9a68:/test# ls -la testfile 
+-rw-rw-r-- 1 root root 0 Aug  6 05:57 testfile
+root@bf93121d9a68:/test# cat testfile
+root@bf93121d9a68:/test# echo "abc" > testfile
+root@bf93121d9a68:/test# cat testfile
+abc
+
+#退出容器，用宿主机账户操作发现是权限不够，但文件内容已经在容器中更改过了
+$ echo "cba" > testfile
+bash: testfile: 权限不够
+$ cat testfile
+abc
+```
+
+### 指定启动容器的用户身份
+
+可以通过Dockerfile中添加USER来决定使用哪个用户，如下,其中useradd创建的用户UID指定为1000，如果1000是宿主机存在的，那么就只是给宿主机的UID=1000的用户添加了组
+
+```dockerfile
+FROM ubuntu
+RUN useradd -r -u 1000 -g appuser
+USER appuser
+ENTRYPOINT ["sleep", "infinity"]
+```
+
+或者通过 docker run 命令的 --user 参数指定容器中进程的用户身份
+
+比如执行下面的命令：
+```
+$ docker run -d --user 1000 --name sleepme ubuntu sleep infinity
+```
+
+需要注意的是，在创建容器时通过 docker run --user 指定的用户身份会覆盖掉 Dockerfile 中指定的值。
+
+演示的对数据卷中文件的操作可以看出，一旦容器中的进程有机会访问到宿主机的资源，它的权限和宿主机上用户的权限是一样的。所以比较安全的做法是为容器中的进程指定一个具有合适权限的用户，而不要使用默认的 root 用户。当然还有更好的方案，就是应用 Linux 的 user namespace 技术隔离用户。
 
 ## Docker命令类
 
