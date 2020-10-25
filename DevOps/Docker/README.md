@@ -940,6 +940,9 @@ docker pull mysql:5.6
 
 docker run -p 3306:3306 --name mysql -v /home/tra/MyApp/mysql/conf:/etc/mysql/conf.d -v /home/tra/MyApp/mysql/logs:/logs -v /home/tra/MyApp/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.6
 
+如果你还用mysql存放图片这种大的数据，需要加上--max-allowed-packet=size启动，如下所示：
+docker run -p 3306:3306 --name mysql -v /home/tra/MyApp/mysql/conf:/etc/mysql/conf.d -v /home/tra/MyApp/mysql/logs:/logs -v /home/tra/MyApp/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.6 --max-allowed-packet=67108864
+
 /home/tra/MyApp/mysql可以使用$(pwd)代替，如果你就在/home/tra/MyApp/mysql目录下执行docker run的话
 ```
 
