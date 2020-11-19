@@ -64,10 +64,10 @@ namespace的6种名称空间功能完善内核版本如下图，所以如果想�
 
 ## Docker安装
 
-这里只演示ubuntu下的安装
+这里只演示ubuntu(16.04/20.04)下的安装
 
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
+curl -fsSL https://get.docker.com -o get-docker.sh 
 sh get-docker.sh
 #以非root用户可以直接运行docker时，需要执行
 sudo usermod -aG docker ${USER}
