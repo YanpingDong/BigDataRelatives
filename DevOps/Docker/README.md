@@ -288,11 +288,12 @@ CMD /bin/bash
 - ENTRYPOINT
   - 类似CMD指令的功能， 用于为容器指定默认运行程序，从而使得容器像是一个单独可执行程序
   - Syntax
-    - ENTRYPOINT \<command\>  or  ENTRYPOINT ["\<executable\>", "\<param1\>", "\<param2\>"] 
+    - ENTRYPOINT \<command\>  or  ENTRYPOINT \["\<executable\>", "\<param1\>", "\<param2\>"\] 
 
     ```docker
     Dockerfile：ENTRYPOINT /bin/httpd -f -h /data/web/html/
-    Docker image instpect imageName：tag输出如下
+    
+    # Docker image instpect imageName：tag输出如下
     "Entrypoint": [
                     "/bin/sh",
                     "-c",
@@ -300,7 +301,7 @@ CMD /bin/bash
                 ]
 
     Dockerfile：ENTRYPOINT ["/bin/httpd", "-f", "-h", "/data/web/html/"]
-    Docker image instpect imageName：tag输出如下
+    # Docker image instpect imageName：tag输出如下
     "Entrypoint": [
                     "/bin/httpd",
                     "-f",
@@ -345,7 +346,7 @@ CMD /bin/bash
 
 ```
 NOTE:
-在docker中有一个很特殊的进程——PID为1的进程，这也是docker的主进程，通过Dockerfile中的 ENTRYPOINT 和/或 CMD指令指定。当主进程退出的时候，容器所拥有的PIG命名空间就会被销毁，容器的生命周期也会结束docker最佳实践建议的是一个container一个service。所以命令一但执行完毕就会清掉容器，这就造成一个错觉，CMD nginx后理论应该持续运行，但看容器状态的时候确是退出状态。而CMD或ENTRYPOINT是脚本脚本（比如entrypoint.sh）的情况，实际脚本的PID是1的进程，脚本设置好各种运行状态后需要用exec来启动真的服务进程，用到就是exec的特性，可以看下段细节描述。
+在docker中有一个很特殊的进程——PID为1的进程，这也是docker的主进程，通过Dockerfile中的 ENTRYPOINT 和/或 CMD指令指定。当主进程退出的时候，容器所拥有的PIG命名空间就会被销毁，容器的生命周期也会结束docker最佳实践建议的是一个container一个service。所以命令一但执行完毕就会清掉容器，这就造成一个错觉，CMD nginx后理论应该持续运行，但看容器状态的时候确是退出状态。而CMD或ENTRYPOINT是执行脚本（比如entrypoint.sh）的情况，实际脚本的PID是1的进程，脚本设置好各种运行状态后需要用exec来启动真的服务进程，用到就是exec的特性，可以看下段细节描述。
 
 exec:在bash下输入man exec，找到exec命令解释处，可以看到有"No new process is created. 和 replaces the current process image with a new process image"这样的解释，这就是说exec命令不产生新的子进程。那么exec与source的区别是什么呢？使用exec command方式，会用command进程替换当前shell进程，并且保持PID不变。执行完毕，直接退出，不回到之前的shell环境。docker里面就用了这样的特性启动主进程，docker先启动配置进程，然后使用exec启用主进程把配置进程进行替换，但pid确不变，要不然主进程会成为配置进程的子进程。
 ```
