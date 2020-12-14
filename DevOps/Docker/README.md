@@ -304,7 +304,7 @@ CMD /bin/bash
     # Docker image instpect imageName：tag输出如下
     "Entrypoint": [
                     "/bin/httpd",
-                    "-f",
+                    "-f",  
                     "-h",
                     "/data/web/html/"
                 ]
