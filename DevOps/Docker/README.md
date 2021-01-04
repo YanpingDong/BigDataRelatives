@@ -991,7 +991,7 @@ cecaea5d1ce1        mysql:5.6           "docker-entrypoint.s…"   2 minutes ago
 
 一个docker服务的界面客户端，方便查看docker服务器的镜像、启动的容器等。
 
-直接使用`docker run -d -p 8088:9000 -v "/var/run/docker.sock:/var/run/docker.sock" --privileged=true portainer/portainer
+直接使用`docker run -d -p 8088:9000 -v "/var/run/docker.sock:/var/run/docker.sock"  --restart=always --privileged=true portainer/portainer
 `安装。
 
 成功后通过localhost:8088使用浏览器看到登录界面，第一次登录的时候需要设置管理员账户。
